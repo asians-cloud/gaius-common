@@ -1,5 +1,5 @@
 
 git+https://github.com/martn/django-jsoneditor@108bc86b134bc926fa584064a132b5be1640cb5c#egg=django-jsoneditor
-git+https://github.com/rq0net/django-keycloak@e6fb900#egg=django-keycloak
-git+https://github.com/rq0net/caesar-user@8bbbe47#egg=caesar-user
-git+https://github.com/rq0net/django-ajax-selects@1c4c7f8#egg=django-ajax-selects
+git+https://github.com/gaius-cloud/django-keycloak@e6fb900#egg=django-keycloak
+git+https://github.com/gaius-cloud/caesar-user@8bbbe47#egg=caesar-user
+git+https://github.com/gaius-cloud/django-ajax-selects@1c4c7f8#egg=django-ajax-selects
