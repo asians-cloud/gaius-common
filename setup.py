@@ -16,10 +16,7 @@ setup(
     author_email='gaius@asians.cloud',
     url='http://github.com/rq0net/gaius-common',
     license='Apache License 2.0',
-    description='''
-    Auth Public.
-    Read the README.rst for more information.
-    ''',
+    description='Auth Public. Read the README.rst for more information.',
     packages=find_packages(),
     long_description=long_description,
     long_description_content_type='text/x-rst',
@@ -29,7 +26,6 @@ setup(
     zip_safe=False,
     include_package_data=True,
     python_requires=">=3.8",
-    # https://pypi.org/classifiers/
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Framework :: Django :: 2.2',
@@ -44,5 +40,3 @@ setup(
         'Topic :: Internet :: WWW/HTTP'
     ],
 )
-
-
