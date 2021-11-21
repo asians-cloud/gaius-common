@@ -336,7 +336,7 @@ USE_KEYCLOAK = env.bool("USE_KEYCLOAK", False)
 if USE_KEYCLOAK is not None:
     INSTALLED_APPS += [
         'django_keycloak.apps.KeycloakAppConfig',
-        'caesar_user',
+        'gaius_user',
     ]
 
     MIDDLEWARE += [
