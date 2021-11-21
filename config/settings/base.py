@@ -53,7 +53,7 @@ if env.str("POSTGRESQL_DB_PARAMETERS", None):
 DATABASES = {
     "default": {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': env.str("POSTGRESQL_DATABASE", "gaius_common"),
+        'NAME': env.str("COMMON_DB_NAME", "gaius_common"),
         'USER': env.str("POSTGRESQL_DB_USER"),
         'PASSWORD': env.str("POSTGRESQL_DB_PASS"),
         'HOST':  env.str("POSTGRESQL_DB_HOST"),
@@ -248,9 +248,11 @@ EMAIL_BACKEND = env(
 EMAIL_TIMEOUT = 5
 
 # ADMIN
+# ADMIN
 # ------------------------------------------------------------------------------
-# Django Admin URL.
-ADMIN_URL = "admin/"
+# Django Admin URL regex.
+ADMIN_URL = env.str("DJANGO_ADMIN_URL", "admin/")
+
 # https://docs.djangoproject.com/en/dev/ref/settings/#admins
 ADMINS = [("""Gaius""", "gaius@asians.cloud")]
 # https://docs.djangoproject.com/en/dev/ref/settings/#managers
