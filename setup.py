@@ -20,9 +20,7 @@ setup(
     packages=find_packages(),
     long_description=long_description,
     long_description_content_type='text/x-rst',
-    keywords='''
-    django rest auth registration rest-framework django-registration api docker cookiecuter tox pytest
-    ''',
+    keywords='django rest auth registration rest-framework django-registration api docker cookiecuter tox pytest',
     zip_safe=False,
     include_package_data=True,
     python_requires=">=3.8",
