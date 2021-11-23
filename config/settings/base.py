@@ -248,7 +248,6 @@ EMAIL_BACKEND = env(
 EMAIL_TIMEOUT = 5
 
 # ADMIN
-# ADMIN
 # ------------------------------------------------------------------------------
 # Django Admin URL regex.
 ADMIN_URL = env.str("DJANGO_ADMIN_URL", "admin/")
