@@ -280,3 +280,6 @@ gaius_common/media/
 .env
 .envs/*
 !.envs/.local/
+/.settings/
+/.project
+/.pydevproject
