@@ -55,7 +55,7 @@ class DomainNameFormField(forms.CharField):
     default_validators = [domain_name_validator, ]
 
     def __init__(self,  *args, **kwargs):
-        super(DomainNameField, self).__init__(*args, **kwargs)
+        super(DomainNameFormField, self).__init__(*args, **kwargs)
 
 
 
@@ -88,15 +88,15 @@ class DomainNameField(models.CharField):
 class Cname:
     def __init__(self, value):
         self.value = value
-        
+
     @property
     def zone(self):
         return ".".join(self.value.split(".")[-2:])
-    
+
     @property
     def subscription(self):
         return self.value.split(".")[-3]
-    
+
     @property
     def domain(self):
         d = self.value.split(".")[-4]
@@ -106,11 +106,11 @@ class CnameField(DomainNameField):
     @property
     def zone(self):
         return Cname(self.value).zone
-    
+
     @property
     def subscription(self):
         return Cname(self.value).subscription
-    
+
     @property
     def domain(self):
         return Cname(self.value).domain
@@ -119,7 +119,7 @@ class CnameField(DomainNameField):
 
 
 class DomainChecker(ABC):
-    
+
     def __init__(self, name, cname, aliases=[], **kwargs):
         self.domain = name
         self.cname = cname
@@ -150,18 +150,18 @@ class DomainChecker(ABC):
             root_domain = self.domain
         else:
             root_domain = '.'.join(self.domain.split('.')[1:])
-        
+
         print(root_domain)
         try:
             a = dns.resolver.query("_cdn-challenge."  + root_domain, rdtype=dns.rdatatype.RdataType.TXT)
         except dns.exception.DNSException as _e:
             raise RuntimeError('DNS query failed')
-        
+
         res = "%s" % a.response
-        
+
         if re.search(r'TXT\s+"%s"' % needle, res) != None:
             return True
-        
+
         return False
 
     def cname_query(self, **_kwargs):
@@ -188,7 +188,7 @@ class DomainChecker(ABC):
             ])
 
     def source_cname(self, **_kwargs):
-        
+
         try:
             a = dns.resolver.query(self.domain)
         except dns.exception.DNSException as _e:
