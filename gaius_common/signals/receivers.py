@@ -7,11 +7,13 @@ from gaius_common.utils import update_lastname_keycloak
 
 @receiver(pre_save, sender=User)
 def update_keycloak(sender, instance, **kwargs):
-    if User.objects.filter(id=instance.id).exists():
-        user = instance
+    if not User.objects.filter(id=instance.id).exists():
         try:
-            cname = user.username.split('-')[0]
-            update_lastname_keycloak(cname)
+            user = instance
+            if user.last_name == 'Caesar':
+                cname = user.username.split('-')[0]
+                update_lastname_keycloak(cname)
+                user.last_name = cname
         except:
             pass
 
