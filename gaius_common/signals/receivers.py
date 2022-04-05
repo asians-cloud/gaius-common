@@ -7,7 +7,7 @@ from gaius_common.utils import update_lastname_keycloak
 
 @receiver(pre_save, sender=User)
 def update_keycloak(sender, instance, **kwargs):
-    if not User.objects.filter(id=instance.id).exists():
+    if instance.id:
         try:
             user = instance
             if user.last_name == 'Caesar':
