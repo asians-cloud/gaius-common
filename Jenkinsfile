@@ -12,7 +12,7 @@
  */
 
 def project = 'gaius'
-def appName = 'commom'
+def appName = 'common'
 def servicename = "${project}-${appName}"
 def registry = "asians.azurecr.io"
 def imageTag = "${registry}/${project}/${appName}:${env.BUILD_NUMBER}"
