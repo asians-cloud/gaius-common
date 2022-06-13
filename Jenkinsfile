@@ -16,7 +16,7 @@ def appName = 'common'
 def servicename = "${project}-${appName}"
 def registry = "asians.azurecr.io"
 def imageTag = "${registry}/${project}/${appName}:${env.BUILD_NUMBER}"
-def helmChart = "."
+def helmChart = "django/django-django"
 def testPrompt = false
 def Dockerfile = "compose/production/django/Dockerfile"
 
@@ -101,8 +101,6 @@ pipeline {
           withKubeConfig([credentialsId: 'k8s-gaius']) {
             dir("chart") {
               sh "helm upgrade --install ${servicename} $helmChart -f ./env.yaml --set image.tag=${env.BUILD_NUMBER} --wait"
-              sh "helm upgrade --install ${servicename}-work $helmChart -f ./env.yaml  -f ./tgbot.yaml --set image.tag=${env.BUILD_NUMBER} --wait"
-              sh "helm upgrade --install ${servicename}-work $helmChart -f ./env.yaml  -f ./worker.yaml --set image.tag=${env.BUILD_NUMBER} --wait"
             }
           }
         }
