@@ -111,7 +111,10 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 # MIGRATIONS
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#migration-modules
-MIGRATION_MODULES = {"sites": "gaius_common.contrib.sites.migrations"}
+MIGRATION_MODULES = {
+    "sites": "gaius_common.contrib.sites.migrations",
+    "fcm_django": "gaius_common.contrib.fcm_django.migrations",
+}
 
 # AUTHENTICATION
 # ------------------------------------------------------------------------------
