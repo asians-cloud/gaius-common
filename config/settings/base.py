@@ -98,6 +98,7 @@ THIRD_PARTY_APPS = [
     'rest_auth',
     "corsheaders",
     "django_celery_results",
+    'fcm_django'
 ]
 
 LOCAL_APPS = [
@@ -367,3 +368,5 @@ if USE_KEYCLOAK is not None:
 
 # Your stuff...
 # ------------------------------------------------------------------------------
+
+FCM_APIKEY = 'BB74Gn0yQoRCdjH-f-NMPXSpcUehDeD-Csnun2aggy279HoMkI7SEuwE6O7jhhfG-eubsnlhZ-rPruVpg9NrKwY'
