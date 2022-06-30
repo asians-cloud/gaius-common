@@ -1,3 +1,5 @@
+fcm-django==1.0.12
+
 git+https://github.com/asians-cloud/django-keycloak@main#egg=django-keycloak
 git+https://github.com/asians-cloud/gaius-user@main#egg=gaius-user
 git+https://github.com/asians-cloud/django-ajax-selects@main#egg=django-ajax-selects
