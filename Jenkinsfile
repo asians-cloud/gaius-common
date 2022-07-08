@@ -32,7 +32,7 @@ pipeline {
   }
 
   stages {
-    stage('Install Dependencies') { 
+    stage('Install Dependencies') {
       steps {
         container(name: 'helm') {
           sh 'helm version'
@@ -42,7 +42,7 @@ pipeline {
       }
     }
 
-    stage('Build Environment') { 
+    stage('Build Environment') {
       steps {
         container(name: 'jinja2') {
           dir("chart") {
@@ -73,7 +73,7 @@ pipeline {
         }
       }
     }
-    
+
     stage('UAT Confirm') {
       steps {
         script {
@@ -124,6 +124,17 @@ pipeline {
           }
         }
       }
+    }
+  }
+
+  // Post-build actions
+  post {
+    always {
+      script {
+        jobLink = "https://jenkins.asians.cloud/job/${JOB_NAME}/${BUILD_NUMBER}/"
+      }
+      echo 'Notification Trigger point.'
+      discordSend description: "Project Pipeline for ${project} ${appName} \n Job Name : ${currentBuild.projectName} \n Job Status : ${currentBuild.currentResult}", footer: "", link: "${jobLink}", image: '', result: currentBuild.currentResult, scmWebUrl: '', thumbnail: '', title: "Gaius - ${appName}", webhookURL: "${webHook}"
     }
   }
 }
