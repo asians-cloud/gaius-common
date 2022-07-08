@@ -11,7 +11,7 @@
  * kubectl create secret docker-registry regcred --docker-server=https://index.docker.io/v1/ --docker-username=csanchez --docker-password=mypassword --docker-email=john@doe.com
  */
 
-def project = 'gaius'
+def project = 'gaius-uat'
 def appName = 'common'
 def servicename = "${project}-${appName}"
 def registry = "asians.azurecr.io"
@@ -69,34 +69,6 @@ pipeline {
       steps {
         container(name: 'helm', shell: '/bin/sh') {
           sh 'helm version'
-          echo "no UAT, skip"
-        }
-      }
-    }
-
-    stage('UAT Confirm') {
-      steps {
-        script {
-          try {
-            timeout(time: 1, unit: 'HOURS') { // change to a convenient timeout for you
-              testPrompt = input(
-                  id: 'UAT tested', message: 'Has it Tested?', parameters: [
-                  [$class: 'BooleanParameterDefinition', defaultValue: false, description: '', name: 'Please confirm all things are working']
-                  ])
-            }
-          } catch(err) { // input false
-              def user = err.getCauses()[0].getUser()
-              userInput = false
-              echo "Aborted by: [${user}]"
-          }
-        }
-      }
-    }
-
-    stage('Deploy to Prod') {
-      steps {
-        container(name: 'helm', shell: '/bin/sh') {
-          sh 'helm version'
 
           withKubeConfig([credentialsId: 'k8s-gaius']) {
             dir("chart") {
@@ -107,7 +79,7 @@ pipeline {
       }
     }
 
-    stage('Prod Confirm') {
+    stage('UAT Confirm') {
       steps {
         script {
           try {
