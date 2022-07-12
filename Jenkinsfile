@@ -46,7 +46,7 @@ pipeline {
       steps {
         container(name: 'jinja2') {
           dir("chart") {
-            sh 'jinja2 --format=json env.yaml.j2 /.gaius-env.json -o env.yaml'
+            sh 'jinja2 --format=json env.yaml.j2 /.gaius-uat-env.json -o env.yaml'
           }
         }
       }
