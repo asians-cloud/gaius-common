@@ -65,34 +65,6 @@ pipeline {
       }
     }
 
-    stage('Deploy to UAT') {
-      steps {
-        container(name: 'helm', shell: '/bin/sh') {
-          sh 'helm version'
-          echo "no UAT, skip"
-        }
-      }
-    }
-
-    stage('UAT Confirm') {
-      steps {
-        script {
-          try {
-            timeout(time: 1, unit: 'HOURS') { // change to a convenient timeout for you
-              testPrompt = input(
-                  id: 'UAT tested', message: 'Has it Tested?', parameters: [
-                  [$class: 'BooleanParameterDefinition', defaultValue: false, description: '', name: 'Please confirm all things are working']
-                  ])
-            }
-          } catch(err) { // input false
-              def user = err.getCauses()[0].getUser()
-              userInput = false
-              echo "Aborted by: [${user}]"
-          }
-        }
-      }
-    }
-
     stage('Deploy to Prod') {
       steps {
         container(name: 'helm', shell: '/bin/sh') {
