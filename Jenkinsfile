@@ -19,6 +19,7 @@ def imageTag = "${registry}/${project}/${appName}:${env.BUILD_NUMBER}"
 def helmChart = "django/django-django"
 def testPrompt = false
 def Dockerfile = "compose/production/django/Dockerfile"
+def cause = currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause')
 
 pipeline {
   agent {
@@ -106,7 +107,7 @@ pipeline {
         jobLink = "https://jenkins.asians.cloud/job/${JOB_NAME}/${BUILD_NUMBER}/"
       }
       echo 'Notification Trigger point.'
-      discordSend description: "Project Pipeline for ${project} ${appName} \n Job Name : ${currentBuild.projectName} \n Job Status : ${currentBuild.currentResult}", footer: "", link: "${jobLink}", image: '', result: currentBuild.currentResult, scmWebUrl: '', thumbnail: '', title: "Gaius - ${appName}", webhookURL: "${webHook}"
+      discordSend description: "Project Pipeline for ${project} ${appName} \n Job Name : ${currentBuild.projectName} \n Job Status : ${currentBuild.currentResult} \n Triggered by: ${cause.userName}", footer: "", link: "${jobLink}", image: '', result: currentBuild.currentResult, scmWebUrl: '', thumbnail: '', title: "Gaius - ${appName}", webhookURL: "${webHook}”
     }
   }
 }
