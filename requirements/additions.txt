@@ -1,0 +1,7 @@
+fcm-django==1.0.12
+python-telegram-bot~=13.3              # https://github.com/python-telegram-bot/python-telegram-bot
+django_telegrambot
+
+git+https://github.com/asians-cloud/django-keycloak@main#egg=django-keycloak
+git+https://github.com/asians-cloud/gaius-user@main#egg=gaius-user
+git+https://github.com/asians-cloud/django-ajax-selects@main#egg=django-ajax-selects

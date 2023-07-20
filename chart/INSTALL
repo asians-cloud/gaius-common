@@ -1,0 +1,19 @@
+
+echo "###### install Common "
+
+helm repo add django https://asians-cloud.github.io/django-helm/charts/
+helm repo update
+
+ENVFILE=/tmp/.env.json
+kubectl get configmaps gaius-env -o jsonpath='{.data.\.env\.json}' > $ENVFILE
+j2 -f json env.yaml.j2 $ENVFILE -o env.yaml
+rm $ENVFILE
+
+if [[ "${INSTALL_OR_UPGRADE}" == "INSTALL" ]]
+then
+  helm delete commom
+
+  helm install commom -f ./env.yaml django/django
+else
+  helm upgrade commom -f ./env.yaml django/django
+fi
