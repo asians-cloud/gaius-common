@@ -4,7 +4,7 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
-
+python maange.py migrate
 python /app/manage.py collectstatic --noinput
 
 
