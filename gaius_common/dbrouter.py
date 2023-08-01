@@ -4,7 +4,7 @@ class AuthRouter:
     auth and contenttypes applications.
     """
     route_app_labels = {'auth', 'admin', 'sites', 'authtoken', 'sessions', 'contenttypes',  'django_keycloak', 'django_celery_results', 'django_celery_beat',
-                        'fcm_django'}
+                        'fcm_django', 'common'}
 
     def db_for_read(self, model, **hints):
         """
@@ -80,3 +80,5 @@ class KongDBRouter(object):
         Make sure the kong app only appear in the '"kong_database"' database.
         """
         return None
+
+    
