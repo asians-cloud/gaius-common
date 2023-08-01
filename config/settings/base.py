@@ -116,6 +116,7 @@ LOCAL_APPS = [
     #"gaius_common.users.apps.UsersConfig",
     # Your stuff: custom apps go here
     'gaius_common.kong',
+    'gaius_common.common'
 ]
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -126,6 +127,7 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 MIGRATION_MODULES = {
     "sites": "gaius_common.contrib.sites.migrations",
     "fcm_django": "gaius_common.contrib.fcm_django.migrations",
+    "common": "gaius_common.contrib.common.migrations"
 }
 
 # AUTHENTICATION
