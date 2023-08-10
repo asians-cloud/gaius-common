@@ -5,5 +5,5 @@ class TGUser(models.Model):
     name = models.TextField(unique=True, blank=True, null=True)
     value = models.TextField(default="",null=False)
 
-def __str__(self):
+    def __str__(self):
         return str(self.name)
