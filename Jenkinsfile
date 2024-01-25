@@ -14,7 +14,7 @@
 def project = 'gaius'
 def appName = 'common'
 def servicename = "${project}-${appName}"
-def registry = "asians.azurecr.io"
+def registry = "gaius.azurecr.io"
 def imageTag = "${registry}/${project}/${appName}:${env.BUILD_NUMBER}"
 def helmChart = "django/django-django"
 def testPrompt = false
@@ -86,12 +86,12 @@ pipeline {
           try {
             timeout(time: 1, unit: 'HOURS') { // change to a convenient timeout for you
               testPrompt = input(
-                  id: 'UAT tested', message: 'Has it Tested?', parameters: [
+                  id: 'Prod_tested', message: 'Has it Tested?', parameters: [
                   [$class: 'BooleanParameterDefinition', defaultValue: false, description: '', name: 'Please confirm all things are working']
                   ])
             }
           } catch(err) { // input false
-              def user = err.getCauses()[0].getUser()
+              def user = cause.userName
               userInput = false
               echo "Aborted by: [${user}]"
           }
