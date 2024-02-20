@@ -202,6 +202,9 @@ MEDIA_ROOT = str(APPS_DIR / "media")
 # https://docs.djangoproject.com/en/dev/ref/settings/#media-url
 MEDIA_URL = "/media/"
 
+# SLACK_WEBHOOK_URL
+SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL")
+
 # TEMPLATES
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#templates
