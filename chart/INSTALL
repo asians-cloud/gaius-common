@@ -9,7 +9,7 @@ kubectl get configmaps gaius-uat-env -o jsonpath='{.data.\.uat\.env\.json}' > $E
 j2 -f json env.yaml.j2 $ENVFILE -o env.yaml
 rm $ENVFILE
 
-common_release="${COMMON_RELEASE_NAME:-gaius-uat-common}"
+common_release="${HELMS.COMMON_RELEASE_NAME:-gaius-uat-common}"
 
 if [[ "${INSTALL_OR_UPGRADE}" == "INSTALL" ]]
 then
