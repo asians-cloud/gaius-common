@@ -11,11 +11,6 @@
  * kubectl create secret docker-registry regcred --docker-server=https://index.docker.io/v1/ --docker-username=csanchez --docker-password=mypassword --docker-email=john@doe.com
  */
 
-def project = 'gaius-uat'
-def appName = 'common'
-def servicename = "${project}-${appName}"
-def registry = "asians.azurecr.io"
-def imageTag = "${registry}/${project}/${appName}:${env.BUILD_NUMBER}"
 def helmChart = "django/django-django"
 def testPrompt = false
 def Dockerfile = "compose/production/django/Dockerfile"
@@ -29,7 +24,11 @@ pipeline {
   }
 
   environment {
-      registryCredential = 'acr-credentials'
+    PROJECT = 'gaius-uat'
+    APP_NAME = 'common'
+    SERVICE_NAME = "${PROJECT}-${APP_NAME}"
+    REGISTRY = credentials("acr-url")
+    IMAGE_TAG = "${REGISTRY}/${PROJECT}/${APP_NAME}:${env.BUILD_NUMBER}"
   }
 
   stages {
@@ -60,7 +59,7 @@ pipeline {
       steps {
         container(name: 'kaniko', shell: '/busybox/sh') {
           sh """#!/busybox/sh
-          /kaniko/executor -f `pwd`/${Dockerfile} -c `pwd` --skip-tls-verify --cache=true --destination=${imageTag}
+          /kaniko/executor -f `pwd`/${Dockerfile} -c `pwd` --skip-tls-verify --cache=true --destination=${IMAGE_TAG}
           """
         }
       }
@@ -73,7 +72,7 @@ pipeline {
 
           withKubeConfig([credentialsId: 'k8s-gaius']) {
             dir("chart") {
-              sh "helm upgrade --install ${servicename} $helmChart -f ./env.yaml --set image.tag=${env.BUILD_NUMBER} --wait"
+              sh "helm upgrade --install ${SERVICE_NAME} $helmChart -f ./env.yaml --set image.tag=${env.BUILD_NUMBER} --wait"
             }
           }
         }
@@ -86,8 +85,8 @@ pipeline {
           try {
             timeout(time: 1, unit: 'HOURS') { // change to a convenient timeout for you
               testPrompt = input(
-                  id: 'UAT tested', message: 'Has it Tested?', parameters: [
-                  [$class: 'BooleanParameterDefinition', defaultValue: false, description: '', name: 'Please confirm all things are working']
+                  id: 'UAT tested', message: 'Has the new change been tested?', parameters: [
+                  [$class: 'BooleanParameterDefinition', defaultValue: false, description: '', name: 'Please confirm that all functionalities are working.']
                   ])
             }
           } catch(err) { // input false
@@ -107,7 +106,7 @@ pipeline {
         jobLink = "https://jenkins.asians.cloud/job/${JOB_NAME}/${BUILD_NUMBER}/"
       }
       echo 'Notification Trigger point.'
-      discordSend description: "Project Pipeline for ${project} ${appName} \n Job Name : ${currentBuild.projectName} \n Job Status : ${currentBuild.currentResult} \n Triggered by: ${cause.userName}", footer: "", link: "${jobLink}", image: '', result: currentBuild.currentResult, scmWebUrl: '', thumbnail: '', title: "Gaius - ${appName}", webhookURL: "${webHook}"
+      discordSend description: "Project Pipeline for ${PROJECT} ${APP_NAME} \n Job Name : ${currentBuild.projectName} \n Job Status : ${currentBuild.currentResult} \n Triggered by: ${cause.userName}", footer: "", link: "${jobLink}", image: "${IMAGE_TAG}", result: currentBuild.currentResult, scmWebUrl: '', thumbnail: '', title: "Gaius - ${APP_NAME}", webhookURL: "${webHook}"
     }
   }
 }
