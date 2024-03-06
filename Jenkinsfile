@@ -90,7 +90,7 @@ pipeline {
       steps {
         script {
           def capitalizedEnvironment = environment.toUpperCase()
-          createDeployment('Deploy to ' + capitalizedEnvironment, helmChart, helmCeleryChart)
+          createDeployment('Deploy to ' + capitalizedEnvironment, helmChart)
           createConfirmation(capitalizedEnvironment + ' Confirmation', cause)
         }
       }
