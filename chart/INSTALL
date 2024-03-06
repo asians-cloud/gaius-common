@@ -9,11 +9,13 @@ kubectl get configmaps gaius-uat-env -o jsonpath='{.data.\.uat\.env\.json}' > $E
 j2 -f json env.yaml.j2 $ENVFILE -o env.yaml
 rm $ENVFILE
 
+common_release="${HELMS.COMMON_RELEASE_NAME:-gaius-uat-common}"
+
 if [[ "${INSTALL_OR_UPGRADE}" == "INSTALL" ]]
 then
-  helm delete gaius-uat-commom
+  helm delete "$common_release"
 
-  helm install gaius-uat-commom -f ./env.yaml django/django-django
+  helm install "$common_release" -f ./env.yaml django/django-django
 else
-  helm upgrade gaius-uat-commom -f ./env.yaml django/django-django
+  helm upgrade "$common_release" -f ./env.yaml django/django-django
 fi
