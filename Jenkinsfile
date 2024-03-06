@@ -80,7 +80,7 @@ pipeline {
       steps {
         container(name: 'kaniko', shell: '/busybox/sh') {
           sh """#!/busybox/sh
-          /kaniko/executor -f `pwd`/${Dockerfile} -c `pwd` --skip-tls-verify --cache=true --destination=${imageName}
+          /kaniko/executor -f `pwd`/${Dockerfile} -c `pwd` --skip-tls-verify --cache=true --destination=${imageTag}
           """
         }
       }
