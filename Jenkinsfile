@@ -1,20 +1,40 @@
-/**
- * This pipeline will build and deploy a Docker image with Kaniko
- * https://github.com/GoogleContainerTools/kaniko
- * without needing a Docker host
- *
- * You need to create a jenkins-docker-cfg secret with your docker config
- * as described in
- * https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/#create-a-secret-in-the-cluster-that-holds-your-authorization-token
- *
- * ie.
- * kubectl create secret docker-registry regcred --docker-server=https://index.docker.io/v1/ --docker-username=csanchez --docker-password=mypassword --docker-email=john@doe.com
- */
-
 def helmChart = "django/django-django"
 def testPrompt = false
 def Dockerfile = "compose/production/django/Dockerfile"
 def cause = currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause')
+
+def createDeployment (deployStageName, helmChart) {
+  return stage(deployStageName) {
+    container(name: 'helm', shell: '/bin/sh') {
+      sh 'helm version'
+
+      withKubeConfig([credentialsId: 'k8s-gaius']) {
+        dir("chart") {
+          sh "helm upgrade --install ${serviceName} $helmChart -f ./env.yaml --set image.tag=${env.BUILD_NUMBER} --wait"
+        }
+      }
+    }
+  }
+}
+
+def createConfirmation (confirmStageName, cause) {
+  return stage(confirmStageName) {
+    script {
+      try {
+        timeout(time: 1, unit: 'HOURS') { // change to a convenient timeout for you
+          testPrompt = input(
+              id: "${environment} tested", message: 'Has the new change been tested?', parameters: [
+              [$class: 'BooleanParameterDefinition', defaultValue: false, description: '', name: 'Please confirm that all functionalities are working.']
+              ])
+        }
+      } catch(err) { // input false
+          def user = cause.userName
+          userInput = false
+          echo "Aborted by: [${user}]"
+      }
+    }
+  }
+}
 
 pipeline {
   agent {
@@ -24,11 +44,12 @@ pipeline {
   }
 
   environment {
-    PROJECT = 'gaius-uat'
-    APP_NAME = 'common'
-    SERVICE_NAME = "${PROJECT}-${APP_NAME}"
-    REGISTRY = credentials("acr-url")
-    IMAGE_TAG = "${REGISTRY}/${PROJECT}/${APP_NAME}:${env.BUILD_NUMBER}"
+    environment = credentials('environment')
+    acrUrl = credentials("acr-url")
+    project = "gaius-${environment}"
+    appName = 'common'
+    serviceName = "${project}-${appName}"
+    imageTag = "${acrUrl}/${project}/${appName}:${env.BUILD_NUMBER}"
   }
 
   stages {
@@ -46,7 +67,7 @@ pipeline {
       steps {
         container(name: 'jinja2') {
           dir("chart") {
-            sh 'jinja2 --format=json env.yaml.j2 /.gaius-uat-env.json -o env.yaml'
+            sh "jinja2 --format=json env.yaml.j2 /.$project-env.json -o env.yaml"
           }
         }
       }
@@ -59,41 +80,18 @@ pipeline {
       steps {
         container(name: 'kaniko', shell: '/busybox/sh') {
           sh """#!/busybox/sh
-          /kaniko/executor -f `pwd`/${Dockerfile} -c `pwd` --skip-tls-verify --cache=true --destination=${IMAGE_TAG}
+          /kaniko/executor -f `pwd`/${Dockerfile} -c `pwd` --skip-tls-verify --cache=true --destination=${imageName}
           """
         }
       }
     }
 
-    stage('Deploy to Prod') {
-      steps {
-        container(name: 'helm', shell: '/bin/sh') {
-          sh 'helm version'
-
-          withKubeConfig([credentialsId: 'k8s-gaius']) {
-            dir("chart") {
-              sh "helm upgrade --install ${SERVICE_NAME} $helmChart -f ./env.yaml --set image.tag=${env.BUILD_NUMBER} --wait"
-            }
-          }
-        }
-      }
-    }
-
-    stage('UAT Confirm') {
+    stage ('Prepare for release') {
       steps {
         script {
-          try {
-            timeout(time: 1, unit: 'HOURS') { // change to a convenient timeout for you
-              testPrompt = input(
-                  id: 'UAT tested', message: 'Has the new change been tested?', parameters: [
-                  [$class: 'BooleanParameterDefinition', defaultValue: false, description: '', name: 'Please confirm that all functionalities are working.']
-                  ])
-            }
-          } catch(err) { // input false
-              def user = cause.userName
-              userInput = false
-              echo "Aborted by: [${user}]"
-          }
+          def capitalizedEnvironment = environment.toUpperCase()
+          createDeployment('Deploy to ' + capitalizedEnvironment, helmChart, helmCeleryChart)
+          createConfirmation(capitalizedEnvironment + ' Confirmation', cause)
         }
       }
     }
@@ -103,10 +101,10 @@ pipeline {
   post {
     always {
       script {
-        jobLink = "https://jenkins.asians.cloud/job/${JOB_NAME}/${BUILD_NUMBER}/"
+        jobLink = "${env.BUILD_URL}"
       }
       echo 'Notification Trigger point.'
-      discordSend description: "Project Pipeline for ${PROJECT} ${APP_NAME} \n Job Name : ${currentBuild.projectName} \n Job Status : ${currentBuild.currentResult} \n Triggered by: ${cause.userName}", footer: "", link: "${jobLink}", image: "${IMAGE_TAG}", result: currentBuild.currentResult, scmWebUrl: '', thumbnail: '', title: "Gaius - ${APP_NAME}", webhookURL: "${webHook}"
+      discordSend description: "Project Pipeline for ${project} ${appName} \n Job Name : ${currentBuild.projectName} \n Job Status : ${currentBuild.currentResult}", footer: "", link: "${jobLink}", image: "${imageTag}", result: currentBuild.currentResult, scmWebUrl: '', thumbnail: '', title: "Gaius - ${appName}", webhookURL: "${webHook}"
     }
   }
 }
