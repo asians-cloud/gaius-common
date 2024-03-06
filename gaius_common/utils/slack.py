@@ -17,9 +17,9 @@ def send_telegram_notification(bot, chat_id, message, parse_mode=None, disable_w
     try:
         bot.send_message(chat_id=chat_id, text=message, parse_mode=parse_mode, disable_web_page_preview=disable_web_page_preview, timeout=timeout)
         return True
-    except TelegramError as e:
+    except Exception as e:
         try:
             bot.send_message(chat_id=chat_id, text=message, parse_mode=parse_mode, disable_web_page_preview=disable_web_page_preview, timeout=timeout)
             return True
-        except TelegramError as e:
+        except Exception as e:
             send_slack_notification(message=message)
