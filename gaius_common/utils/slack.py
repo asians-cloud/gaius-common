@@ -1,4 +1,4 @@
-import requests
+import requests, traceback
 from django.conf import settings
 
 from telegram.error import TelegramError
@@ -6,8 +6,9 @@ from telegram.error import TelegramError
 
 def send_slack_notification(message):
     slack_webhook_url = settings.SLACK_WEBHOOK_URL
+    message_with_traceback = message + '<br /><br />' + traceback.format_exc()
     payload = {
-        "text": message
+        "text": message_with_traceback
     }
     response = requests.post(slack_webhook_url, json=payload)        
     return True if response.status_code == 200 else False
