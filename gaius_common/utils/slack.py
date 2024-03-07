@@ -28,7 +28,10 @@ def send_telegram_notification(bot, chat_id, message, parse_mode=None, disable_w
                 *Error:*
                 {str(e)}
 
-                *Traceback*
+                *File Path:*
+                {traceback.extract_tb(e.__traceback__)[-1]}
+
+                *Traceback:*
                 {traceback.format_exc()}
             """
             send_slack_notification(message=message)
