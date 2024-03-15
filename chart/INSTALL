@@ -4,16 +4,18 @@ echo "###### install Common "
 helm repo add django https://asians-cloud.github.io/django-helm/charts/
 helm repo update
 
-ENVFILE=/tmp/.env.json
-kubectl get configmaps gaius-env -o jsonpath='{.data.\.env\.json}' > $ENVFILE
+ENVFILE=/tmp/.uat.env.json
+kubectl get configmaps gaius-uat-env -o jsonpath='{.data.\.uat\.env\.json}' > $ENVFILE
 j2 -f json env.yaml.j2 $ENVFILE -o env.yaml
 rm $ENVFILE
 
+common_release="${HELMS.COMMON_RELEASE_NAME:-gaius-uat-common}"
+
 if [[ "${INSTALL_OR_UPGRADE}" == "INSTALL" ]]
 then
-  helm delete commom
+  helm delete "$common_release"
 
-  helm install commom -f ./env.yaml django/django
+  helm install "$common_release" -f ./env.yaml django/django-django
 else
-  helm upgrade commom -f ./env.yaml django/django
+  helm upgrade "$common_release" -f ./env.yaml django/django-django
 fi
