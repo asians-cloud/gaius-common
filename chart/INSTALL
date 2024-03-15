@@ -4,8 +4,8 @@ echo "###### install Common "
 helm repo add django https://asians-cloud.github.io/django-helm/charts/
 helm repo update
 
-ENVFILE=/tmp/.uat.env.json
-kubectl get configmaps gaius-uat-env -o jsonpath='{.data.\.uat\.env\.json}' > $ENVFILE
+ENVFILE=/tmp/.env.json
+kubectl get configmaps gaius-env -o jsonpath='{.data.\.env\.json}' > $ENVFILE
 j2 -f json env.yaml.j2 $ENVFILE -o env.yaml
 rm $ENVFILE
 
