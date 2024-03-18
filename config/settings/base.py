@@ -25,9 +25,9 @@ DEBUG = env.bool("DJANGO_DEBUG", False)
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
 # though not all of them may be available with every OS.
 # In Windows, this must be set to your system time zone.
-TIME_ZONE = "Asia/Singapore"
+TIME_ZONE = env.str("TIME_ZONE", "Asia/Singapore")
 # https://docs.djangoproject.com/en/dev/ref/settings/#language-code
-LANGUAGE_CODE = "en-us"
+LANGUAGE_CODE =  env.str("LANGUAGE_CODE", "en-us")
 # https://docs.djangoproject.com/en/dev/ref/settings/#site-id
 SITE_ID = 1
 # https://docs.djangoproject.com/en/dev/ref/settings/#use-i18n
@@ -202,6 +202,9 @@ MEDIA_ROOT = str(APPS_DIR / "media")
 # https://docs.djangoproject.com/en/dev/ref/settings/#media-url
 MEDIA_URL = "/media/"
 
+# SLACK_WEBHOOK_URL
+SLACK_WEBHOOK_URL = env.str("SLACK_WEBHOOK_URL")
+
 # TEMPLATES
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#templates
@@ -272,7 +275,7 @@ EMAIL_TIMEOUT = 5
 ADMIN_URL = env.str("DJANGO_ADMIN_URL", "admin/")
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#admins
-ADMINS = [("""Gaius""", "gaius@asians.cloud")]
+ADMINS = [("""Gaius""", env.str("DJANGO_SU_EMAIL", "gaius@asians.cloud"))]
 # https://docs.djangoproject.com/en/dev/ref/settings/#managers
 MANAGERS = ADMINS
 
@@ -308,12 +311,12 @@ if USE_TZ:
 # http://docs.celeryproject.org/en/latest/userguide/configuration.html#std:setting-broker_url
 #CELERY_BROKER_URL = env("CELERY_BROKER_URL")
 
-REDIS_HOST = os.getenv('REDIS_HOST', 'redis-master')
-REDIS_PASSWORD = os.getenv('REDIS_PASSWORD', 'hZg7kXzvPN')
-REDIS_PORT = os.getenv('REDIS_PORT', '6379')
-REDIS_DATABASE = os.getenv('REDIS_DATABASE', '1')
-REDIS_DATABASE_CELERY = os.getenv('REDIS_DATABASE_CELERY', '0')
-REDIS_DATABASE_IP_BLOCK = os.getenv('REDIS_DATABASE_IP_BLOCK', '15')
+REDIS_HOST = env.str('REDIS_HOST', 'redis-master')
+REDIS_PASSWORD = env.str('REDIS_PASSWORD', 'hZg7kXzvPN')
+REDIS_PORT = env.int('REDIS_PORT', 6379)
+REDIS_DATABASE = env.int('REDIS_DATABASE', 1)
+REDIS_DATABASE_CELERY = env.int('REDIS_DATABASE_CELERY', 0)
+REDIS_DATABASE_IP_BLOCK = env.int('REDIS_DATABASE_IP_BLOCK', 15)
 
 CELERY_BROKER_URL = f'redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DATABASE_CELERY}'
 
@@ -387,4 +390,4 @@ if USE_KEYCLOAK is not None:
 # Your stuff...
 # ------------------------------------------------------------------------------
 
-FCM_APIKEY = os.getenv('FCM_APIKEY', '')
+FCM_APIKEY = env.str('FCM_APIKEY', '')
