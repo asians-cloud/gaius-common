@@ -195,6 +195,9 @@ STATICFILES_FINDERS = [
     "django.contrib.staticfiles.finders.AppDirectoriesFinder",
 ]
 
+# SLACK_WEBHOOK_URL
+SLACK_WEBHOOK_URL = env.str("SLACK_WEBHOOK_URL")
+
 # MEDIA
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#media-root
