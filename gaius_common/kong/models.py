@@ -425,17 +425,17 @@ class Routes(models.Model):
     updated_at = models.DateTimeField(blank=True, null=True, auto_now=True)
     name = models.TextField(blank=True, null=True)
     service = models.ForeignKey('Services', models.DO_NOTHING, blank=True, null=True)
-    protocols = ArrayField(models.TextField(), blank=True, null=True)  # This field type is a guess.
-    methods = ArrayField(models.TextField(), blank=True, null=True)  # This field type is a guess.
-    hosts = ArrayField(models.TextField(), blank=True, null=True)  # This field type is a guess.
-    paths = ArrayField(models.TextField(), blank=True, null=True)  # This field type is a guess.
-    snis = ArrayField(models.TextField(), blank=True, null=True)  # This field type is a guess.
-    sources = ArrayField(models.JSONField(), blank=True, null=True)  # This field type is a guess.
-    destinations = ArrayField(models.JSONField(), blank=True, null=True)  # This field type is a guess.
+    protocols = ArrayField(models.TextField(), blank=True, null=True)
+    methods = ArrayField(models.TextField(), blank=True, null=True)
+    hosts = ArrayField(models.TextField(), blank=True, null=True)
+    paths = ArrayField(models.TextField(), blank=True, null=True)
+    snis = ArrayField(models.TextField(), blank=True, null=True) 
+    sources = ArrayField(models.JSONField(), blank=True, null=True)
+    destinations = ArrayField(models.JSONField(), blank=True, null=True) 
     regex_priority = models.BigIntegerField(blank=True, null=True, default=0)
     strip_path = models.BooleanField(blank=True, null=True, default=True)
     preserve_host = models.BooleanField(blank=True, null=True, default=True)
-    tags = ArrayField(models.TextField(), blank=True, null=True)  # This field type is a guess.
+    tags = ArrayField(models.TextField(), blank=True, null=True)
     https_redirect_status_code = models.IntegerField(blank=True, null=True)
     headers = models.JSONField(blank=True, null=True)
     path_handling = models.TextField(blank=True, null=True, default='v0')
@@ -445,6 +445,7 @@ class Routes(models.Model):
     expression = models.TextField(default='')
     priority = models.BigIntegerField(default=0)
     metadata = models.ForeignKey('KongEntityMetadata', models.DO_NOTHING, blank=True, null=True, related_name='metadata_routes')
+    has_auto_generate_certificate = models.BooleanField(blank=True, null=True, default=False)
 
     class Meta:
         managed = False
