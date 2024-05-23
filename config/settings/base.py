@@ -366,7 +366,7 @@ if USE_KEYCLOAK is not None:
         'django_keycloak.middleware.BaseKeycloakMiddleware',
         'django_keycloak.middleware.KeycloakStatelessBearerAuthenticationMiddleware',
     ]
-    PASSWORD_HASHERS = [
+    PASSWORD_HASHERS += [
         'django_keycloak.hashers.PBKDF2SHA512PasswordHasher',
     ]
     AUTHENTICATION_BACKENDS = [
