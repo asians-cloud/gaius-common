@@ -1,8 +1,11 @@
-from django.db.models.signals import pre_save
+from django.utils import timezone
+from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.contrib.auth.models import User
 
+from gaius_common.common.models import ChangeLog, CHANGE_LOG_CREATE, CHANGE_LOG_UPDATE
 from gaius_common.utils import update_lastname_keycloak
+from gaius_common.middleware.healthcheck import get_current_request
 
 
 @receiver(pre_save, sender=User)
@@ -17,3 +20,52 @@ def update_keycloak(sender, instance, **kwargs):
         except:
             pass
 
+
+@receiver(pre_save)
+def capture_old_values(sender, instance, **kwargs):
+    if instance.pk:
+        try:
+            old_instance = sender.objects.get(pk=instance.pk)
+            for field in instance._meta.fields:
+                old_value = getattr(old_instance, field.attname)
+                setattr(instance, f"old_{field.attname}", old_value)
+        except sender.DoesNotExist:
+            pass
+
+
+@receiver(post_save)
+def track_changes(sender, instance, created, **kwargs):
+    # Don't log changes for newly created instances
+    request = get_current_request()
+    hostname = request.get_host() if request else 'Unknown'
+    api_endpoint = request.path if request else 'Unknown'
+    ip_address = request.META.get('REMOTE_ADDR') if request else 'Unknown'
+    user = request.user if request and request.user.is_authenticated else None
+
+    change_type = CHANGE_LOG_CREATE if created else CHANGE_LOG_UPDATE
+
+    field_names = [field.name for field in sender._meta.get_fields()]
+
+    change_log_values = []
+    for field_name in field_names:
+        old_value = getattr(instance, f"old_{field_name}", None)
+        new_value = getattr(instance, field_name)
+        if old_value != new_value:
+            change_log_values.append(
+                ChangeLog(
+                    model_name=sender.__name__,
+                    instance_id=instance.pk,
+                    field_name=field_name,
+                    old_value=str(old_value),
+                    new_value=str(new_value),
+                    type=change_type,
+                    timestamp=timezone.now(),
+                    hostname=hostname,
+                    api_endpoint=api_endpoint,
+                    user=user,
+                    ip_address=ip_address
+                )
+            )
+
+    if change_log_values:
+        ChangeLog.objects.bulk_create(change_log_values)
