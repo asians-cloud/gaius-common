@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 
 from gaius_common.common.models import ChangeLog, CHANGE_LOG_CREATE, CHANGE_LOG_UPDATE
 from gaius_common.utils import update_lastname_keycloak
-from gaius_common.middleware.healthcheck import get_current_request
+from gaius_common.middleware.changeLog import get_current_request
 
 
 @receiver(pre_save, sender=User)
