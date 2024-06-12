@@ -25,6 +25,7 @@ class ChangeLog(models.Model):
         verbose_name='Model Name'
     )
     instance_id = models.CharField(
+        max_length=255,
         verbose_name='Instance ID'
     )
     field_name = models.CharField(
