@@ -59,10 +59,9 @@ class ChangeLog(models.Model):
         null=True,
         verbose_name='API Endpoint'
     )
-    user = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        related_name='changelog_users',
+    user = models.CharField(
+        max_length=255,
+        blank=True,
         null=True,
         verbose_name='User'
     )
