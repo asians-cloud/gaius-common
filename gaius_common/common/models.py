@@ -24,7 +24,7 @@ class ChangeLog(models.Model):
         max_length=100,
         verbose_name='Model Name'
     )
-    instance_id = models.PositiveIntegerField(
+    instance_id = models.CharField(
         verbose_name='Instance ID'
     )
     field_name = models.CharField(
