@@ -49,7 +49,7 @@ def track_changes(sender, instance, created, **kwargs):
     change_log_values = []
     for field_name in field_names:
         old_value = getattr(instance, f"old_{field_name}", None)
-        new_value = getattr(instance, field_name)
+        new_value = getattr(instance, field_name, None)
         if old_value != new_value:
             change_log_values.append(
                 ChangeLog(
