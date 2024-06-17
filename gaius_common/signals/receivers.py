@@ -11,7 +11,10 @@ from elasticsearch.helpers import bulk
 from elasticsearch import Elasticsearch
 from gaius_common.common.document import ChangeLogDocument
 
-client = Elasticsearch()
+client = Elasticsearch(
+    hosts=["http://localhost:9200"],  # Update with your Elasticsearch host
+    basic_auth=("elastic", "user@123")  # Replace with your actual username and password
+)
 
 @receiver(pre_save, sender=User)
 def update_keycloak(sender, instance, **kwargs):
@@ -79,7 +82,13 @@ def track_changes(sender, instance, created, **kwargs):
 
     # Convert documents to the format required by the bulk helper
     if documents:
-        actions = [doc.to_dict() for doc in documents]
+        actions = [
+            {
+                "_index": ChangeLogDocument._index._name,  # Ensure the index name is included
+                "_source": doc.to_dict()
+            }
+            for doc in documents
+        ]
 
         # Use the bulk helper to index documents
         bulk(client, actions)
