@@ -2,11 +2,22 @@ from django.utils import timezone
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.contrib.auth.models import User
-
-from gaius_common.common.models import ChangeLog, CHANGE_LOG_CREATE, CHANGE_LOG_UPDATE
+from django.conf import settings
 from gaius_common.utils import update_lastname_keycloak
 from gaius_common.middleware.changeLog import get_current_request
 
+from elasticsearch.helpers import bulk
+from elasticsearch import Elasticsearch
+from gaius_common.common.document import ChangeLogDocument
+
+
+client = Elasticsearch(
+    hosts=[settings.ELASTICSEARCH_API_HOST],
+    api_key=settings.ELASTICSEARCH_API_KEY
+)
+
+CHANGE_LOG_CREATE = "create"
+CHANGE_LOG_UPDATE = "update"
 
 @receiver(pre_save, sender=User)
 def update_keycloak(sender, instance, **kwargs):
@@ -46,13 +57,18 @@ def track_changes(sender, instance, created, **kwargs):
 
     field_names = [field.name for field in sender._meta.get_fields()]
 
-    change_log_values = []
+    # Initialize the index
+    ChangeLogDocument.init(using=client)
+
+    # Create a list of documents to be indexed
+    documents = []
     for field_name in field_names:
         old_value = getattr(instance, f"old_{field_name}", None)
         new_value = getattr(instance, field_name, None)
         if old_value != new_value:
-            change_log_values.append(
-                ChangeLog(
+            documents.append(
+                ChangeLogDocument(
+                    request_id=request.request_id,
                     model_name=sender.__name__,
                     instance_id=instance.pk,
                     field_name=field_name,
@@ -67,5 +83,15 @@ def track_changes(sender, instance, created, **kwargs):
                 )
             )
 
-    if change_log_values:
-        ChangeLog.objects.bulk_create(change_log_values)
+    # Convert documents to the format required by the bulk helper
+    if documents:
+        actions = [
+            {
+                "_index": ChangeLogDocument._index._name,  # Ensure the index name is included
+                "_source": doc.to_dict()
+            }
+            for doc in documents
+        ]
+
+        # Use the bulk helper to index documents
+        bulk(client, actions)

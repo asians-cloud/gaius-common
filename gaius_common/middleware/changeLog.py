@@ -1,4 +1,5 @@
 import threading
+import uuid
 
 _thread_locals = threading.local()
 
@@ -10,6 +11,7 @@ class ChangeLogMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        _thread_locals.request = request
+        request.request_id = str(uuid.uuid4())
+        _thread_locals.request = request    
         response = self.get_response(request)
         return response
