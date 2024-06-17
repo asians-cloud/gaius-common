@@ -196,9 +196,6 @@ STATICFILES_FINDERS = [
     "django.contrib.staticfiles.finders.AppDirectoriesFinder",
 ]
 
-# SLACK_WEBHOOK_URL
-SLACK_WEBHOOK_URL = env.str("SLACK_WEBHOOK_URL")
-
 # MEDIA
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#media-root
@@ -370,7 +367,7 @@ if USE_KEYCLOAK is not None:
         'django_keycloak.middleware.BaseKeycloakMiddleware',
         'django_keycloak.middleware.KeycloakStatelessBearerAuthenticationMiddleware',
     ]
-    PASSWORD_HASHERS += [
+    PASSWORD_HASHERS = [
         'django_keycloak.hashers.PBKDF2SHA512PasswordHasher',
     ]
     AUTHENTICATION_BACKENDS = [

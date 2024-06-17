@@ -50,7 +50,6 @@ pipeline {
     appName = 'common'
     serviceName = "${project}-${appName}"
     imageTag = "${acrUrl}/${project}/${appName}:${env.BUILD_NUMBER}"
-    webHook = credentials("discord-webhook")
   }
 
   stages {

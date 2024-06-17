@@ -1,4 +1,4 @@
-import uuid
+import uuid, functools
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
 from fcm_django.models import FCMDevice
@@ -442,6 +442,8 @@ class Routes(models.Model):
     ws = models.ForeignKey('Workspaces', models.DO_NOTHING, blank=True, null=True, related_name='routes')
     request_buffering = models.BooleanField(blank=True, null=True, default=True)
     response_buffering = models.BooleanField(blank=True, null=True, default=True)
+    expression = models.TextField(default='')
+    priority = models.BigIntegerField(default=0)
     metadata = models.ForeignKey('KongEntityMetadata', models.DO_NOTHING, blank=True, null=True, related_name='metadata_routes')
 
     class Meta:
@@ -481,10 +483,110 @@ class Routes(models.Model):
             self.name = self.name.replace('*', 'all')
         return f"{self.name}.{tags.get('cname', '')}"
 
+    def _gen_for_field(self, name, op, vals, val_transform = None):
+        if not vals or vals == None:
+            return None
+
+        atc_escape_str = lambda s: "\"" + s + "\""
+
+        values = []
+
+        for p in vals:
+            op = (type(op) == str and op or op(p))
+            values.append(name + " " + op + " " + atc_escape_str(val_transform and val_transform(op, p) or p))
+
+        if len(values) > 0:
+            return "(" + " || ".join(values) + ")"
+
+        return None
+
+    def get_atc(self, route):
+        OP_EQUAL    = "=="
+        OP_PREFIX   = "^="
+        OP_POSTFIX  = "=^"
+        OP_REGEX    = "~"
+        TILDE = "~"
+        ASTERISK = "*"
+
+        def is_regex_magic(path):
+            return path[:1] == TILDE
+
+        def paths_resort(paths):
+            if not paths:
+                return
+            sorted(paths, key=functools.cmp_to_key(lambda a, b: is_regex_magic(a) and not is_regex_magic(b)))
+
+        def split_host_port(string):
+            if not string.rsplit(':', 1)[-1].isdigit():
+                return (string, None)
+
+            string = string.rsplit(':', 1)
+
+            host = string[0]  # 1st index is always host
+            port = int(string[1])
+
+            return (host, port)
+
+        out = []
+
+        gen = self._gen_for_field("http.method", OP_EQUAL, route.methods)
+        if gen:
+            out.append(gen)
+
+        gen = self._gen_for_field("tls.sni", OP_EQUAL, route.snis)
+        if gen:
+            gen = "net.protocol != \"https\" || " + gen
+            out.append(gen)
+
+        if route.hosts and route.hosts != None:
+            hosts = []
+
+            for h in route.hosts:
+                host, port = split_host_port(h)
+
+                op = OP_EQUAL
+                if host[:1] == ASTERISK:
+                    op = OP_POSTFIX
+                    host = host[2:]
+                elif host[-1:] == ASTERISK:
+                    op = OP_PREFIX
+                    host = host[:-2]
+
+                atc = "http.host " + op + " \"" + host + "\""
+                if not port:
+                    hosts.append(atc)
+                else:
+                    hosts.append("(" + atc + " && net.port " + OP_EQUAL + " " + port + ")")
+
+            out.append("(" + " || ".join(hosts) + ")")
+
+
+        if route.paths != None:
+            paths_resort(route.paths)
+
+        def op_callback(path):
+            return is_regex_magic(path) and OP_REGEX or OP_PREFIX
+
+        def path_callback(op, p):
+            if op == OP_REGEX:
+                p = p[1:]
+                p = "^" + p
+                return p
+            return p
+
+        gen = self._gen_for_field("http.path", op_callback, route.paths, path_callback)
+        if gen:
+            out.append(gen)
+
+        return " && ".join(out)
+
+
     def save(self, *args, **kwargs):
 
         # First Need to store ws_id in workspaces table
         self.ws = Workspaces.objects.get()
+
+        self.expression = self.get_atc(self)
 
         super(Routes, self).save(*args, **kwargs)
 
@@ -513,9 +615,9 @@ class Services(models.Model):
     host = models.TextField(blank=True, null=True)
     port = models.BigIntegerField(blank=True, null=True)
     path = models.TextField(blank=True, null=True)
-    connect_timeout = models.BigIntegerField(blank=True, null=True, default=9000)
-    write_timeout = models.BigIntegerField(blank=True, null=True, default=60000)
-    read_timeout = models.BigIntegerField(blank=True, null=True, default=60000)
+    connect_timeout = models.BigIntegerField(blank=True, null=True, default=8000)
+    write_timeout = models.BigIntegerField(blank=True, null=True, default=8000)
+    read_timeout = models.BigIntegerField(blank=True, null=True, default=8000)
     tags = ArrayField(models.TextField(), blank=True, null=True)  # This field type is a guess.
     client_certificate = models.ForeignKey(Certificates, models.DO_NOTHING, blank=True, null=True)
     tls_verify = models.BooleanField(blank=True, null=True)
