@@ -2,7 +2,7 @@ from django.utils import timezone
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.contrib.auth.models import User
-
+from django.conf import settings
 from gaius_common.utils import update_lastname_keycloak
 from gaius_common.middleware.changeLog import get_current_request
 
@@ -10,9 +10,10 @@ from elasticsearch.helpers import bulk
 from elasticsearch import Elasticsearch
 from gaius_common.common.document import ChangeLogDocument
 
+
 client = Elasticsearch(
-    hosts=["http://localhost:9200"],  # Update with your Elasticsearch host
-    basic_auth=("elastic", "user@123")  # Replace with your actual username and password
+    hosts=[settings.ELASTICSEARCH_API_HOST],
+    api_key=settings.ELASTICSEARCH_API_KEY
 )
 
 CHANGE_LOG_CREATE = "create"

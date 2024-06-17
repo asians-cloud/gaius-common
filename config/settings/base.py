@@ -396,8 +396,5 @@ if USE_KEYCLOAK is not None:
 
 FCM_APIKEY = env.str('FCM_APIKEY', '')
 
-ELASTICSEARCH_DSL = {
-    'default': {
-        'hosts': env.str('ELASTICSEARCH_DSL_HOST', 'localhost:9200')
-    },
-}
+ELASTICSEARCH_API_HOST=env.str('ELASTICSEARCH_API_HOST','')
+ELASTICSEARCH_API_KEY=env.str('ELASTICSEARCH_API_KEY','')
