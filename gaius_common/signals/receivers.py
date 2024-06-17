@@ -3,7 +3,6 @@ from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.contrib.auth.models import User
 
-from gaius_common.common.models import ChangeLog, CHANGE_LOG_CREATE, CHANGE_LOG_UPDATE
 from gaius_common.utils import update_lastname_keycloak
 from gaius_common.middleware.changeLog import get_current_request
 
@@ -15,6 +14,9 @@ client = Elasticsearch(
     hosts=["http://localhost:9200"],  # Update with your Elasticsearch host
     basic_auth=("elastic", "user@123")  # Replace with your actual username and password
 )
+
+CHANGE_LOG_CREATE = "create"
+CHANGE_LOG_UPDATE = "update"
 
 @receiver(pre_save, sender=User)
 def update_keycloak(sender, instance, **kwargs):

@@ -9,7 +9,7 @@ class ChangeLogDocument(Document):
     old_value = Text()
     new_value = Text()
     timestamp = Date()
-    type = Integer()
+    type = Text()
     hostname = Text()
     api_endpoint = Text()
     user = Text()

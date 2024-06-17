@@ -1,6 +1,8 @@
 fcm-django==1.0.12
 python-telegram-bot~=13.3              # https://github.com/python-telegram-bot/python-telegram-bot
 django_telegrambot
+elasticsearch-dsl==8.14.0
+django-elasticsearch-dsl==8.0
 
 git+https://github.com/asians-cloud/django-keycloak@main#egg=django-keycloak
 git+https://github.com/asians-cloud/gaius-user@main#egg=gaius-user
