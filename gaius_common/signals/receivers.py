@@ -50,7 +50,7 @@ def track_changes(sender, instance, created, **kwargs):
     hostname = request.headers.get('Origin') if request else 'Unknown'
     api_endpoint = request.path if request else 'Unknown'
     ip_address = request.ip_address if request else 'Unknown'
-    user = request.user.username if request and request.user.is_authenticated else None
+    user = request.user.email if request and request.user.is_authenticated and request.user.email else 'Anonymous'
     request_id=request.request_id if request else None
 
     change_type = CHANGE_LOG_CREATE if created else CHANGE_LOG_UPDATE
