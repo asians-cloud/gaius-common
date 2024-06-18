@@ -51,6 +51,7 @@ def track_changes(sender, instance, created, **kwargs):
     api_endpoint = request.path if request else 'Unknown'
     ip_address = request.ip_address if request else 'Unknown'
     user = request.user.username if request and request.user.is_authenticated else None
+    request_id=request.request_id if request else None
 
     change_type = CHANGE_LOG_CREATE if created else CHANGE_LOG_UPDATE
 
@@ -67,7 +68,7 @@ def track_changes(sender, instance, created, **kwargs):
         if old_value != new_value:
             documents.append(
                 ChangeLogDocument(
-                    request_id=request.request_id,
+                    request_id=request_id,
                     model_name=sender.__name__,
                     instance_id=instance.pk,
                     field_name=field_name,
