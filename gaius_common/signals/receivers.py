@@ -46,11 +46,10 @@ def capture_old_values(sender, instance, **kwargs):
 
 @receiver(post_save)
 def track_changes(sender, instance, created, **kwargs):
-    # Don't log changes for newly created instances
     request = get_current_request()
-    hostname = request.get_host() if request else 'Unknown'
+    hostname = request.headers.get('Origin') if request else request.META.get('HTTP_REFERER')
     api_endpoint = request.path if request else 'Unknown'
-    ip_address = request.META.get('REMOTE_ADDR') if request else 'Unknown'
+    ip_address = request.ip_address if request else 'Unknown'
     user = request.user.username if request and request.user.is_authenticated else None
 
     change_type = CHANGE_LOG_CREATE if created else CHANGE_LOG_UPDATE
