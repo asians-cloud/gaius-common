@@ -24,8 +24,5 @@ class ChangeLogMiddleware:
         request.request_id = str(uuid.uuid4())
         request.ip_address = get_ip_address()
         _request_ctx.set(request)
-        print("META Data:")
-        for key, value in request.META.items():
-            print(f"  {key}: {value}")
         response = self.get_response(request)
         return response
