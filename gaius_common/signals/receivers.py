@@ -9,6 +9,7 @@ from gaius_common.middleware.changeLog import get_current_request
 from elasticsearch.helpers import bulk
 from elasticsearch import Elasticsearch
 from gaius_common.common.document import ChangeLogDocument
+from elasticsearch.helpers import BulkIndexError
 
 
 client = Elasticsearch(
@@ -94,4 +95,7 @@ def track_changes(sender, instance, created, **kwargs):
         ]
 
         # Use the bulk helper to index documents
-        bulk(client, actions)
+        try:
+            bulk(client, actions)
+        except BulkIndexError as e:
+            pass
