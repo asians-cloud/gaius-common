@@ -43,8 +43,7 @@ def trigger_track_changes(sender, instance, created, **kwargs):
             'hostname': request.headers.get('Origin') if request else 'Unknown',
             'api_endpoint': request.path if request else 'Unknown',
             'ip_address': request.META.get('REMOTE_ADDR') if request else 'Unknown',
-            # 'user': request.user.email if request and request.user.is_authenticated and request.user.email else 'Anonymous',
-            'user': 'Anonymous'
+            'user': request.user.email if request and request.user.is_authenticated and request.user.email else 'Anonymous'
         }
 
         field_changes = {
