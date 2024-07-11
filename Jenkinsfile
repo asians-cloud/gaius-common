@@ -73,6 +73,34 @@ pipeline {
       }
     }
 
+    stage('SonarQube analysis') {
+      steps {
+        withSonarQubeEnv("qube.asians.cloud") {
+          script {
+            def scannerHome = tool 'SonarScanner';
+            sh "${scannerHome}/bin/sonar-scanner"
+          }
+        }
+      }
+      post {
+        always {
+          jiraSendBuildInfo branch: "${environment}", site: "asianscloud.atlassian.net"
+        }
+      }
+    }
+
+    stage("Quality Gate"){
+      steps {
+        script {
+          sleep time: 15, unit: 'SECONDS'
+          def qg = waitForQualityGate() // Reuse taskId previously collected by withSonarQubeEnv
+          if (qg.status != 'OK') {
+            error "Pipeline aborted due to quality gate failure: ${qg.status}"
+          }
+        }
+      }
+    }
+
     stage('Build with Kaniko') {
       environment {
         PATH = "/busybox:/kaniko:$PATH"
@@ -101,8 +129,11 @@ pipeline {
   post {
     always {
       script {
+        environmentType = environment == 'uat' ? 'testing' : (environment == 'staging' ? 'staging' : 'production')
         jobLink = "${env.BUILD_URL}"
       }
+      jiraSendDeploymentInfo environmentId: "${environment}", environmentName: "${environment}", environmentType: "${environmentType}", site: "asianscloud.atlassian.net"
+      
       echo 'Notification Trigger point.'
       discordSend description: "Project Pipeline for ${project} ${appName} \n Job Name : ${currentBuild.projectName} \n Job Status : ${currentBuild.currentResult}", footer: "", link: "${jobLink}", image: "${imageTag}", result: currentBuild.currentResult, scmWebUrl: '', thumbnail: '', title: "Gaius - ${appName}", webhookURL: "${webHook}"
     }
