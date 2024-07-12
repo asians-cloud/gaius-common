@@ -62,7 +62,10 @@ def track_changes(sender, instance_id=None, created=False, field_changes=None, r
             # Use the bulk helper to index documents
             try:
                 bulk(client, actions)
+                return True
             except BulkIndexError as e:
                 logger.error(f"Bulk indexing error: {e}")
+                return False
     except Exception as e:
         logger.error(f"Error in track_changes task: {e}")
+        return False
