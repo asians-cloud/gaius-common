@@ -46,18 +46,23 @@ def trigger_track_changes(sender, instance, created, **kwargs):
             'user': request.user.email if request and request.user.is_authenticated and request.user.email else 'Anonymous'
         }
 
-        field_changes = [field.name for field in sender._meta.get_fields()]
+        field_changes = {}
+        for field in instance._meta.fields:
+            old_value = getattr(instance, f"old_{field.attname}", None)
+            new_value = getattr(instance, field.attname)
+            if old_value != new_value:
+                field_changes[field.name] = (old_value, new_value)
 
-
-        app.send_task(
-            'common.track_changes',
-            kwargs={
-                'sender': sender.__name__,
-                'instance_id': instance.pk,
-                'created': created,
-                'field_changes': field_changes,
-                'request_meta': request_meta,
-            }
-        )
+        if field_changes:
+            app.send_task(
+                'common.track_changes',
+                kwargs={
+                    'sender': sender.__name__,
+                    'instance_id': instance.pk,
+                    'created': created,
+                    'field_changes': field_changes,
+                    'request_meta': request_meta,
+                }
+            )
     except Exception as e:
         logger.error(f"Error triggering track_changes task: {e}")

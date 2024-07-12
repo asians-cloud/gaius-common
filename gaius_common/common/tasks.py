@@ -31,23 +31,22 @@ def track_changes(sender, instance_id=None, created=False, field_changes=None, r
         # Create a list of documents to be indexed
         documents = []
         for field_name, (old_value, new_value) in field_changes.items():
-            if old_value != new_value:
-                documents.append(
-                    ChangeLogDocument(
-                        request_id=request_meta['request_id'],
-                        model_name=sender,
-                        instance_id=instance_id,
-                        field_name=field_name,
-                        old_value=str(old_value),
-                        new_value=str(new_value),
-                        type=change_type,
-                        timestamp=timezone.now(),
-                        hostname=request_meta['hostname'],
-                        api_endpoint=request_meta['api_endpoint'],
-                        user=request_meta['user'],
-                        ip_address=request_meta['ip_address']
-                    )
+            documents.append(
+                ChangeLogDocument(
+                    request_id=request_meta['request_id'],
+                    model_name=sender,
+                    instance_id=instance_id,
+                    field_name=field_name,
+                    old_value=str(old_value),
+                    new_value=str(new_value),
+                    type=change_type,
+                    timestamp=timezone.now(),
+                    hostname=request_meta['hostname'],
+                    api_endpoint=request_meta['api_endpoint'],
+                    user=request_meta['user'],
+                    ip_address=request_meta['ip_address']
                 )
+            )
 
         # Convert documents to the format required by the bulk helper
         if documents:
