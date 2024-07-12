@@ -26,24 +26,14 @@ def update_keycloak(sender, instance, **kwargs):
 CHANGE_LOG_CREATE = "create"
 CHANGE_LOG_UPDATE = "update"
 
-def skip_agent_model(sender):
-    return sender._meta.model_name == 'agent'
-
-def skip_agent_related_fields(field):
-    return field.related_model and field.related_model._meta.model_name == 'agent'
-
 
 @receiver(pre_save)
 def capture_old_values(sender, instance, **kwargs):
-    if skip_agent_model(sender):
-        return
 
     if instance.pk:
         try:
             old_instance = sender.objects.get(pk=instance.pk)
             for field in instance._meta.fields:
-                if skip_agent_related_fields(field):
-                    continue
                 old_value = getattr(old_instance, field.attname)
                 setattr(instance, f"old_{field.attname}", old_value)
         except sender.DoesNotExist:
@@ -52,8 +42,6 @@ def capture_old_values(sender, instance, **kwargs):
 
 @receiver(post_save)
 def track_changes(sender, instance, created, **kwargs):
-    if skip_agent_model(sender):
-        return
 
     current_context = get_current_request()
     print(current_context)
@@ -95,8 +83,6 @@ def track_changes(sender, instance, created, **kwargs):
     field_names = [field.name for field in sender._meta.get_fields()]
 
     for field_name in field_names:
-        if skip_agent_related_fields(sender._meta.get_field(field_name)):
-            continue
 
         old_value = getattr(instance, f"old_{field_name}", None)
         new_value = getattr(instance, field_name, None)
