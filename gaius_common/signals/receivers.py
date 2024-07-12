@@ -46,10 +46,18 @@ def trigger_track_changes(sender, instance, created, **kwargs):
             'user': request.user.email if request and request.user.is_authenticated and request.user.email else 'Anonymous'
         }
 
-        field_changes = {
-            field.name: (getattr(instance, f"old_{field.name}", None), getattr(instance, field.name, None))
-            for field in sender._meta.fields
-        }
+        field_changes = {}
+        if instance.pk:
+            try:
+                old_instance = sender.objects.get(pk=instance.pk)
+                for field in instance._meta.fields:
+                    old_value = getattr(old_instance, field.attname)
+                    new_value = getattr(instance, field.attname)
+                    if old_value != new_value:
+                        field_changes[field.name] = (old_value, new_value)
+            except sender.DoesNotExist:
+                pass
+
 
         app.send_task(
             'common.track_changes',
