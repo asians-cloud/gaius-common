@@ -7,16 +7,8 @@ from gaius_common.middleware.changeLog import get_current_request
 from elasticsearch import Elasticsearch
 from config.celery_app import app
 import logging
-from django.core.serializers.json import DjangoJSONEncoder
-from json import JSONEncoder
-import json
 
 logger = logging.getLogger(__name__)
-
-class EnhancedJSONEncoder(DjangoJSONEncoder):
-    def default(self, obj):
-        # Add any additional types here that need to be serialized
-        return super().default(obj)
 
 @receiver(pre_save, sender=User)
 def update_keycloak(sender, instance, **kwargs):
@@ -54,16 +46,7 @@ def trigger_track_changes(sender, instance, created, **kwargs):
             'user': request.user.email if request and request.user.is_authenticated and request.user.email else 'Anonymous'
         }
 
-        # Make sure field_changes are serializable
-        field_changes = {
-            field.name: (
-                json.dumps(getattr(instance, f"old_{field.name}", None), cls=EnhancedJSONEncoder), 
-                json.dumps(getattr(instance, field.name, None), cls=EnhancedJSONEncoder)
-            ) for field in sender._meta.fields
-        }
-
-        # Ensure request_meta is serializable
-        request_meta_serializable = {key: json.dumps(value, cls=EnhancedJSONEncoder) for key, value in request_meta.items()}
+        field_changes = [field.name for field in sender._meta.get_fields()]
 
 
         app.send_task(
@@ -73,7 +56,7 @@ def trigger_track_changes(sender, instance, created, **kwargs):
                 'instance_id': instance.pk,
                 'created': created,
                 'field_changes': field_changes,
-                'request_meta': request_meta_serializable,
+                'request_meta': request_meta,
             }
         )
     except Exception as e:
