@@ -16,6 +16,7 @@ client = Elasticsearch(
 
 @app.task(name='common.track_changes')
 def track_changes(change_log_data):
+    logger.info(f"Change log data: {change_log_data}")
     # Initialize the index
     ChangeLogDocument.init(using=client)
 
