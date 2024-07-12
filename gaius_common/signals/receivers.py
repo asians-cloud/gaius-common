@@ -6,6 +6,7 @@ from gaius_common.utils import update_lastname_keycloak
 from gaius_common.middleware.changeLog import get_current_request
 from elasticsearch import Elasticsearch
 from config.celery_app import app
+from django.utils import timezone
 import logging
 
 logger = logging.getLogger(__name__)
@@ -22,52 +23,90 @@ def update_keycloak(sender, instance, **kwargs):
         except:
             pass
 
+CHANGE_LOG_CREATE = "create"
+CHANGE_LOG_UPDATE = "update"
+
+def skip_agent_model(sender):
+    return sender._meta.model_name == 'agent'
+
+def skip_agent_related_fields(field):
+    return field.related_model and field.related_model._meta.model_name == 'agent'
+
 
 @receiver(pre_save)
 def capture_old_values(sender, instance, **kwargs):
+    if skip_agent_model(sender):
+        return
+
     if instance.pk:
         try:
             old_instance = sender.objects.get(pk=instance.pk)
             for field in instance._meta.fields:
+                if skip_agent_related_fields(field):
+                    continue
                 old_value = getattr(old_instance, field.attname)
                 setattr(instance, f"old_{field.attname}", old_value)
         except sender.DoesNotExist:
             pass
 
+
 @receiver(post_save)
-def trigger_track_changes(sender, instance, created, **kwargs):
-    try:
-        request = get_current_request()
-        request_meta = {
-            'request_id': request.request_id if request else None,
-            'hostname': request.headers.get('Origin') if request else 'Unknown',
-            'api_endpoint': request.path if request else 'Unknown',
-            'ip_address': request.META.get('REMOTE_ADDR') if request else 'Unknown',
-            'user': request.user.email if request and request.user.is_authenticated and request.user.email else 'Anonymous'
-        }
+def track_changes(sender, instance, created, **kwargs):
+    if skip_agent_model(sender):
+        return
 
-        field_changes = {}
-        if instance.pk:
-            try:
-                old_instance = sender.objects.get(pk=instance.pk)
-                for field in instance._meta.fields:
-                    old_value = getattr(old_instance, field.attname)
-                    new_value = getattr(instance, field.attname)
-                    if old_value != new_value:
-                        field_changes[field.name] = (old_value, new_value)
-            except sender.DoesNotExist:
-                pass
+    current_context = get_current_request()
+    print(current_context)
+    if not current_context:
+        return
+    
+    request_id = current_context.get('request_id', None)
+    ip_address = current_context.get('ip_address', 'Unknown')
 
+    change_type = CHANGE_LOG_CREATE if created else CHANGE_LOG_UPDATE
 
-        app.send_task(
-            'common.track_changes',
-            kwargs={
-                'sender': sender.__name__,
-                'instance_id': instance.pk,
-                'created': created,
-                'field_changes': field_changes,
-                'request_meta': request_meta,
-            }
-        )
-    except Exception as e:
-        logger.error(f"Error triggering track_changes task: {e}")
+    hostname = 'Unknown'
+    api_endpoint = 'Unknown'
+    user = 'Anonymous'
+
+    # Safely get the request object from the context
+    request = current_context.get('request', None)
+    if request:
+        hostname = request.headers.get('Origin', 'Unknown')
+        api_endpoint = request.path
+
+        if request.user.is_authenticated:
+            user = request.user.email
+
+    # Collect data to send to the Celery task
+    change_log_data = {
+        'request_id': request_id,
+        'model_name': sender.__name__,
+        'instance_id': instance.pk,
+        'change_type': change_type,
+        'timestamp': timezone.now().isoformat(),
+        'hostname': hostname,
+        'api_endpoint': api_endpoint,
+        'user': user,
+        'ip_address': ip_address,
+        'field_changes': []
+    }
+
+    field_names = [field.name for field in sender._meta.get_fields()]
+
+    for field_name in field_names:
+        if skip_agent_related_fields(sender._meta.get_field(field_name)):
+            continue
+
+        old_value = getattr(instance, f"old_{field_name}", None)
+        new_value = getattr(instance, field_name, None)
+        if old_value != new_value:
+            change_log_data['field_changes'].append({
+                'field_name': field_name,
+                'old_value': str(old_value),
+                'new_value': str(new_value)
+            })
+
+    # Trigger the Celery task
+    if change_log_data['field_changes']:
+        app.send_task('common.track_changes', kwargs={'change_log_data': change_log_data}, queue='common')
