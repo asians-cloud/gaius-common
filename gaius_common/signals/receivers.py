@@ -4,8 +4,8 @@ from django.contrib.auth.models import User
 from django.conf import settings
 from gaius_common.utils import update_lastname_keycloak
 from gaius_common.middleware.changeLog import get_current_request
+from elasticsearch import Elasticsearch
 from config.celery_app import app
-from django.utils import timezone
 import logging
 
 logger = logging.getLogger(__name__)
@@ -22,72 +22,45 @@ def update_keycloak(sender, instance, **kwargs):
         except:
             pass
 
-CHANGE_LOG_CREATE = "create"
-CHANGE_LOG_UPDATE = "update"
-
 
 @receiver(pre_save)
 def capture_old_values(sender, instance, **kwargs):
     if instance.pk:
         try:
             old_instance = sender.objects.get(pk=instance.pk)
-            instance.old_values = {}
             for field in instance._meta.fields:
                 old_value = getattr(old_instance, field.attname)
-                instance.old_values[field.attname] = old_value
+                setattr(instance, f"old_{field.attname}", old_value)
         except sender.DoesNotExist:
             pass
 
-
 @receiver(post_save)
-def track_changes(sender, instance, created, **kwargs):
-    current_context = get_current_request()
-    if not current_context:
-        return
+def trigger_track_changes(sender, instance, created, **kwargs):
+    try:
+        request = get_current_request()
+        request_meta = {
+            'request_id': request.request_id if request else None,
+            'hostname': request.headers.get('Origin') if request else 'Unknown',
+            'api_endpoint': request.path if request else 'Unknown',
+            'ip_address': request.META.get('REMOTE_ADDR') if request else 'Unknown',
+            'user': request.user.email if request and request.user.is_authenticated and request.user.email else 'Anonymous'
+        }
 
-    request_id = current_context.get('request_id', None)
-    ip_address = current_context.get('ip_address', 'Unknown')
+        field_changes = {
+            field.name: (getattr(instance, f"old_{field.name}", None), getattr(instance, field.name, None))
+            for field in sender._meta.fields
+        }
 
-    change_type = CHANGE_LOG_CREATE if created else CHANGE_LOG_UPDATE
 
-    hostname = 'Unknown'
-    api_endpoint = 'Unknown'
-    user = 'Anonymous'
-
-    # Safely get the request object from the context
-    request = current_context.get('request', None)
-    if request:
-        hostname = request.headers.get('Origin', 'Unknown')
-        api_endpoint = request.path
-
-        if request.user.is_authenticated:
-            user = request.user.email
-
-    # Collect data to send to the Celery task
-    change_log_data = {
-        'request_id': request_id,
-        'model_name': sender.__name__,
-        'instance_id': instance.pk,
-        'change_type': change_type,
-        'timestamp': timezone.now().isoformat(),
-        'hostname': hostname,
-        'api_endpoint': api_endpoint,
-        'user': user,
-        'ip_address': ip_address,
-        'field_changes': []
-    }
-
-    old_values = getattr(instance, 'old_values', {})
-    for field in instance._meta.fields:
-        old_value = old_values.get(field.attname, None)
-        new_value = getattr(instance, field.attname, None)
-        if old_value != new_value:
-            change_log_data['field_changes'].append({
-                'field_name': field.name,
-                'old_value': str(old_value),
-                'new_value': str(new_value)
-            })
-
-    # Trigger the Celery task
-    if change_log_data['field_changes']:
-        app.send_task('common.track_changes', kwargs={'change_log_data': change_log_data}, queue='common')
+        app.send_task(
+            'common.track_changes',
+            kwargs={
+                'sender': sender.__name__,
+                'instance_id': instance.pk,
+                'created': created,
+                'field_changes': field_changes,
+                'request_meta': request_meta,
+            }
+        )
+    except Exception as e:
+        logger.error(f"Error triggering track_changes task: {e}")

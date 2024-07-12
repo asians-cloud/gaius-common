@@ -9,50 +9,60 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+CHANGE_LOG_CREATE = "create"
+CHANGE_LOG_UPDATE = "update"
+
 client = Elasticsearch(
     hosts=[settings.ELASTICSEARCH_API_HOST],
     api_key=settings.ELASTICSEARCH_API_KEY
 )
 
 @app.task(name='common.track_changes')
-def track_changes(change_log_data):
-    logger.info(f"Change log data: {change_log_data}")
-    # Initialize the index
-    ChangeLogDocument.init(using=client)
+def track_changes(sender, instance_id=None, created=False, field_changes=None, request_meta=None):
+    try:
+        if not instance_id or not field_changes or not request_meta:
+            return
 
-    # Create a list of documents to be indexed
-    documents = []
-    for field_change in change_log_data['field_changes']:
-        documents.append(
-            ChangeLogDocument(
-                request_id=change_log_data['request_id'],
-                model_name=change_log_data['model_name'],
-                instance_id=change_log_data['instance_id'],
-                field_name=field_change['field_name'],
-                old_value=field_change['old_value'],
-                new_value=field_change['new_value'],
-                type=change_log_data['change_type'],
-                timestamp=timezone.now(),  # Use current time for indexing timestamp
-                hostname=change_log_data['hostname'],
-                api_endpoint=change_log_data['api_endpoint'],
-                user=change_log_data['user'],
-                ip_address=change_log_data['ip_address']
-            )
-        )
+        change_type = CHANGE_LOG_CREATE if created else CHANGE_LOG_UPDATE
 
-    # Convert documents to the format required by the bulk helper
-    if documents:
-        actions = [
-            {
-                "_index": ChangeLogDocument._index._name,
-                "_source": doc.to_dict()
-            }
-            for doc in documents
-        ]
+        # Initialize the index
+        ChangeLogDocument.init(using=client)
 
-        # Use the bulk helper to index documents
-        try:
-            bulk(client, actions)
-        except BulkIndexError as e:
-            # Log the error or handle it as necessary
-            pass
+        # Create a list of documents to be indexed
+        documents = []
+        for field_name, (old_value, new_value) in field_changes.items():
+            if old_value != new_value:
+                documents.append(
+                    ChangeLogDocument(
+                        request_id=request_meta['request_id'],
+                        model_name=sender,
+                        instance_id=instance_id,
+                        field_name=field_name,
+                        old_value=str(old_value),
+                        new_value=str(new_value),
+                        type=change_type,
+                        timestamp=timezone.now(),
+                        hostname=request_meta['hostname'],
+                        api_endpoint=request_meta['api_endpoint'],
+                        user=request_meta['user'],
+                        ip_address=request_meta['ip_address']
+                    )
+                )
+
+        # Convert documents to the format required by the bulk helper
+        if documents:
+            actions = [
+                {
+                    "_index": ChangeLogDocument._index._name,  # Ensure the index name is included
+                    "_source": doc.to_dict()
+                }
+                for doc in documents
+            ]
+
+            # Use the bulk helper to index documents
+            try:
+                bulk(client, actions)
+            except BulkIndexError as e:
+                logger.error(f"Bulk indexing error: {e}")
+    except Exception as e:
+        logger.error(f"Error in track_changes task: {e}")
