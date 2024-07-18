@@ -6,9 +6,13 @@ from gaius_common.utils import update_lastname_keycloak
 from gaius_common.middleware.changeLog import get_current_request
 from elasticsearch import Elasticsearch
 from config.celery_app import app
+from django.utils import timezone
 import logging
 
 logger = logging.getLogger(__name__)
+
+CHANGE_LOG_CREATE = "create"
+CHANGE_LOG_UPDATE = "update"
 
 @receiver(pre_save, sender=User)
 def update_keycloak(sender, instance, **kwargs):
@@ -25,6 +29,7 @@ def update_keycloak(sender, instance, **kwargs):
 
 @receiver(pre_save)
 def capture_old_values(sender, instance, **kwargs):
+
     if instance.pk:
         try:
             old_instance = sender.objects.get(pk=instance.pk)
@@ -34,35 +39,62 @@ def capture_old_values(sender, instance, **kwargs):
         except sender.DoesNotExist:
             pass
 
+
 @receiver(post_save)
-def trigger_track_changes(sender, instance, created, **kwargs):
-    try:
-        request = get_current_request()
-        request_meta = {
-            'request_id': request.request_id if request else None,
-            'hostname': request.headers.get('Origin') if request else 'Unknown',
-            'api_endpoint': request.path if request else 'Unknown',
-            'ip_address': request.META.get('REMOTE_ADDR') if request else 'Unknown',
-            'user': request.user.email if request and request.user.is_authenticated and request.user.email else 'Anonymous'
-        }
+def track_changes(sender, instance, created, **kwargs):
 
-        field_changes = {}
-        for field in instance._meta.fields:
-            old_value = getattr(instance, f"old_{field.attname}", None)
-            new_value = getattr(instance, field.attname)
-            if old_value != new_value:
-                field_changes[field.name] = (old_value, new_value)
+    current_context = get_current_request()
+    print(current_context)
+    if not current_context:
+        return
+    
+    request_id = current_context.get('request_id', None)
+    ip_address = current_context.get('ip_address', 'Unknown')
 
-        if field_changes:
-            app.send_task(
-                'common.track_changes',
-                kwargs={
-                    'sender': sender.__name__,
-                    'instance_id': instance.pk,
-                    'created': created,
-                    'field_changes': field_changes,
-                    'request_meta': request_meta,
-                },queue='common'
-            )
-    except Exception as e:
-        logger.error(f"Error triggering track_changes task: {e}")
+    change_type = CHANGE_LOG_CREATE if created else CHANGE_LOG_UPDATE
+
+    hostname = 'Unknown'
+    api_endpoint = 'Unknown'
+    user = 'Anonymous'
+
+    # Safely get the request object from the context
+    request = current_context.get('request', None)
+    if request:
+        hostname = request.headers.get('Origin', 'Unknown')
+        api_endpoint = request.path
+
+        if request.user.is_authenticated:
+            user = request.user.email
+        if not user:
+            user = 'Anonymous'
+
+    # Collect data to send to the Celery task
+    change_log_data = {
+        'request_id': request_id,
+        'model_name': sender.__name__,
+        'instance_id': instance.pk,
+        'change_type': change_type,
+        'timestamp': timezone.now().isoformat(),
+        'hostname': hostname,
+        'api_endpoint': api_endpoint,
+        'user': user,
+        'ip_address': ip_address,
+        'field_changes': []
+    }
+
+    field_names = [field.name for field in sender._meta.get_fields()]
+
+    for field_name in field_names:
+
+        old_value = getattr(instance, f"old_{field_name}", None)
+        new_value = getattr(instance, field_name, None)
+        if old_value != new_value:
+            change_log_data['field_changes'].append({
+                'field_name': field_name,
+                'old_value': str(old_value),
+                'new_value': str(new_value)
+            })
+
+    # Trigger the Celery task
+    if change_log_data['field_changes']:
+        app.send_task('common.track_changes', kwargs={'change_log_data': change_log_data}, queue='common')
