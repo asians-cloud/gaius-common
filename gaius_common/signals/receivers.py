@@ -62,7 +62,7 @@ def trigger_track_changes(sender, instance, created, **kwargs):
                     'created': created,
                     'field_changes': field_changes,
                     'request_meta': request_meta,
-                }
+                },queue='common'
             )
     except Exception as e:
         logger.error(f"Error triggering track_changes task: {e}")
