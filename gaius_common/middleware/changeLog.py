@@ -1,5 +1,5 @@
 import uuid
-import socket
+import requests
 from contextvars import ContextVar
 
 _request_ctx = ContextVar('current_request', default={})
@@ -15,14 +15,20 @@ def add_to_request_context(key, value):
     context[key] = value
     _request_ctx.set(context)
 
+_ip_cache = None
+_IP_CHECK_URL = 'https://ifconfig.me/ip'
+
 def get_ip_address():
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))
-        ip_address = s.getsockname()[0]
-        return ip_address
-    except OSError:
-        return None
+    global _ip_cache
+    if _ip_cache is None:
+        try:
+            # Use requests to fetch the public IP address
+            response = requests.get(_IP_CHECK_URL)
+            response.raise_for_status()
+            _ip_cache = response.text.strip()
+        except requests.RequestException:
+            _ip_cache = "127.0.0.1"
+    return _ip_cache
 
 class ChangeLogMiddleware:
     def __init__(self, get_response):
