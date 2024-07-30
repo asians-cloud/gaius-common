@@ -205,6 +205,7 @@ MEDIA_URL = "/media/"
 
 # SLACK_WEBHOOK_URL
 SLACK_WEBHOOK_URL = env.str("SLACK_WEBHOOK_URL")
+LOGS_INDEX_V3 = env.str("LOGS_INDEX_V3")
 
 # TEMPLATES
 # ------------------------------------------------------------------------------
