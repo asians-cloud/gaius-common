@@ -16,4 +16,4 @@ class ChangeLogDocument(Document):
     ip_address = Ip()
 
     class Index:
-        name = 'change-logs'
+        name = "change-logs"
