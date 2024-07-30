@@ -15,20 +15,15 @@ def add_to_request_context(key, value):
     context[key] = value
     _request_ctx.set(context)
 
-_ip_cache = None
-_IP_CHECK_URL = 'https://ifconfig.me/ip'
-
-def get_ip_address():
-    global _ip_cache
-    if _ip_cache is None:
-        try:
-            # Use requests to fetch the public IP address
-            response = requests.get(_IP_CHECK_URL)
-            response.raise_for_status()
-            _ip_cache = response.text.strip()
-        except requests.RequestException:
-            _ip_cache = "127.0.0.1"
-    return _ip_cache
+def get_ip_address(request):
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        # HTTP_X_FORWARDED_FOR can return multiple IP addresses in case of a proxy
+        # In this case, the first IP address is the client's real IP address
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
 
 class ChangeLogMiddleware:
     def __init__(self, get_response):
@@ -38,7 +33,7 @@ class ChangeLogMiddleware:
         # Create a new dictionary for storing metadata
         request_metadata = {
             'request_id': str(uuid.uuid4()),
-            'ip_address': get_ip_address(),
+            'ip_address': get_ip_address(request),
             'request': request  # Add the request object to the metadata
         }
 
