@@ -1,5 +1,4 @@
 from elasticsearch_dsl import Document, Keyword, Text, Date, Ip
-from django.conf import settings
 
 
 class ChangeLogDocument(Document):
@@ -17,4 +16,4 @@ class ChangeLogDocument(Document):
     ip_address = Ip()
 
     class Index:
-        name = settings.LOGS_INDEX_V3
+        name = "change-logs"
