@@ -179,6 +179,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.common.BrokenLinkEmailsMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "gaius_common.middleware.changeLog.ChangeLogMiddleware"
 ]
 
 # STATIC
