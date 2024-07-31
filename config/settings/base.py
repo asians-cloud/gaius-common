@@ -395,3 +395,4 @@ if USE_KEYCLOAK is not None:
 # ------------------------------------------------------------------------------
 
 FCM_APIKEY = env.str('FCM_APIKEY', '')
+LOGS_INDEX_V3=env.str('LOGS_INDEX_V3','change-logs')
