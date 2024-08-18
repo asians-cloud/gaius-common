@@ -179,6 +179,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.common.BrokenLinkEmailsMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "gaius_common.middleware.changeLog.ChangeLogMiddleware"
 ]
 
 # STATIC
@@ -394,3 +395,4 @@ if USE_KEYCLOAK is not None:
 # ------------------------------------------------------------------------------
 
 FCM_APIKEY = env.str('FCM_APIKEY', '')
+LOGS_INDEX_V3=env.str('LOGS_INDEX_V3','change-logs')
