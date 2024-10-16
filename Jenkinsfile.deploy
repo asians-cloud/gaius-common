@@ -1,0 +1,84 @@
+def helmChart = "django/django-django"
+def cause = currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause')
+def imageTag
+
+pipeline {
+  agent {
+    kubernetes {
+      inheritFrom 'kaniko'
+    }
+  }
+
+  environment {
+    environment = credentials('environment')
+    acrUrl = credentials("acr-url")
+    project = "gaius-${environment}"
+    appName = 'common'
+    serviceName = "${project}-${appName}"
+  }
+
+  stages {
+    stage('Retrieve Artifacts') {
+      steps {
+        script {
+          copyArtifacts projectName: "${appName}/build", selector: lastSuccessful()
+          imageTag = readFile 'image-tag.txt'.trim()
+          imageTag = imageTag.replaceAll("[\\n\\r]", "").trim()
+        }
+      }
+    }
+
+    stage('Install Helm Charts') {
+      steps {
+        container(name: 'helm') {
+          sh 'helm version'
+          sh "helm repo add django https://asians-cloud.github.io/django-helm/charts/"
+          sh "helm repo update"
+        }
+      }
+    }
+
+    stage('Deploy with Helm') {
+      steps {
+        container(name: 'helm', shell: '/bin/sh') {
+          sh 'helm version'
+          
+          withKubeConfig([credentialsId: 'k8s-gaius']) {
+            dir("chart") {
+              sh "helm upgrade --install ${serviceName} $helmChart -f ./env.yaml --set image.tag=${env.BUILD_NUMBER} --wait"
+            }
+          }
+        }
+      }
+    }
+
+    stage('Confirmation') {
+      steps {
+        script {
+          try {
+            timeout(time: 1, unit: 'HOURS') {
+              input(id: "${environment} tested", message: "Has the new image#$imageTag been tested?", parameters: [
+                [$class: 'BooleanParameterDefinition', defaultValue: false, description: '', name: 'Please confirm that all functionalities are working.']
+              ])
+            }
+          } catch(err) {
+            def user = cause.userName
+            echo "Aborted by: [${user}]"
+          }
+        }
+      }
+    }
+  }
+
+  post {
+    always {
+      script {
+        environmentType = environment == 'uat' ? 'testing' : (environment == 'staging' ? 'staging' : 'production')
+        jobLink = "${env.BUILD_URL}"
+      }
+      jiraSendDeploymentInfo environmentId: "${environment}", environmentName: "${environment}", environmentType: "${environmentType}", site: "asianscloud.atlassian.net"
+
+      discordSend description: "Deployment Pipeline for ${project} ${appName} \n Job Name : ${currentBuild.projectName} \n Job Status : ${currentBuild.currentResult}", footer: "", link: "${jobLink}", image: '', result: currentBuild.currentResult, scmWebUrl: '', thumbnail: '', title: "Gaius - ${appName}", webhookURL: "${webHook}"
+    }
+  }
+}
