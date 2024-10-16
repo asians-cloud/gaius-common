@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "gaius-common"
+version = "0.1.0"
+description = "Common microservice for V3"
+authors = ["Asians Group LLC <dev.team@asians.cloud>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+fcm-django = "==1.0.12"
+python-telegram-bot = "~=13.3"
+python-telegram-bot = "*"
+django_telegrambot = "*"
+elasticsearch-dsl = "==8.14.0"
+django-elasticsearch-dsl = "==8.0"
+python = "^3.9.0"
+
+[tool.poetry.group.git.dependencies]
+gaius-user = { git = "https://github.com/asians-cloud/gaius-user", branch = "main" }
+django-keycloak = { git = "https://github.com/asians-cloud/django-keycloak", rev = "e6fb900" }
+django-ajax-selects = { git = "https://github.com/asians-cloud/django-ajax-selects", rev = "1c4c7f8" }
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
