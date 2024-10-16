@@ -8,7 +8,6 @@ readme = "README.md"
 [tool.poetry.dependencies]
 fcm-django = "==1.0.12"
 python-telegram-bot = "~=13.3"
-python-telegram-bot = "*"
 django_telegrambot = "*"
 elasticsearch-dsl = "==8.14.0"
 django-elasticsearch-dsl = "==8.0"
