@@ -6,7 +6,7 @@ from setuptools import setup, find_packages
 __version__ = "1.0.0"
 
 here = os.path.dirname(os.path.abspath(__file__))
-with open(os.path.join(here, 'README.rst')) as f:
+with open(os.path.join(here, 'README.md')) as f:
     long_description = f.read().strip()
 
 setup(
@@ -16,7 +16,7 @@ setup(
     author_email='gaius@asians.cloud',
     url='http://github.com/rq0net/gaius-common',
     license='Apache License 2.0',
-    description='Auth Public. Read the README.rst for more information.',
+    description='Auth Public. Read the README.md for more information.',
     packages=find_packages(),
     long_description=long_description,
     long_description_content_type='text/x-rst',

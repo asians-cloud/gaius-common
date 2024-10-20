@@ -1,0 +1,88 @@
+def Dockerfile = "compose/production/django/Dockerfile"
+
+pipeline {
+  agent {
+    kubernetes {
+      inheritFrom 'kaniko'
+    }
+  }
+
+  environment {
+    environment = credentials('environment')
+    acrUrl = credentials("acr-url")
+    project = "gaius-${environment}"
+    appName = 'common'
+    serviceName = "${project}-${appName}"
+    imageTag = "${acrUrl}/${project}/${appName}:${env.BUILD_NUMBER}"
+    webHook = credentials("discord-webhook")
+  }
+
+  stages {
+    stage('Build Environment') {
+      steps {
+        container(name: 'jinja2') {
+          dir("chart") {
+            sh "jinja2 --format=json env.yaml.j2 /.$project-env.json -o env.yaml"
+          }
+        }
+      }
+    }
+
+    stage('SonarQube analysis') {
+      steps {
+        withSonarQubeEnv("qube.asians.cloud") {
+          script {
+            def scannerHome = tool 'SonarScanner';
+            sh "${scannerHome}/bin/sonar-scanner"
+          }
+        }
+      }
+    }
+
+    stage("Quality Gate") {
+      steps {
+        script {
+          sleep time: 15, unit: 'SECONDS'
+          def qg = waitForQualityGate()
+          if (qg.status != 'OK') {
+            error "Pipeline aborted due to quality gate failure: ${qg.status}"
+          }
+        }
+      }
+    }
+
+    stage('Build with Kaniko') {
+      environment {
+        PATH = "/busybox:/kaniko:$PATH"
+      }
+      steps {
+        container(name: 'kaniko', shell: '/busybox/sh') {
+          sh """#!/busybox/sh
+          /kaniko/executor -f `pwd`/${Dockerfile} -c `pwd` --skip-tls-verify --cache=true --destination=${imageTag} --build-arg ENVIRONMENT=${environment}
+          """
+        }
+      }
+    }
+
+    stage('Save Artifacts') {
+      steps {
+        script {
+          sh "echo ${env.BUILD_NUMBER} > image-tag.txt"
+          archiveArtifacts artifacts: 'image-tag.txt, chart/*.yaml', allowEmptyArchive: false
+        }
+      }
+    }
+  }
+
+  post {
+    always {
+      script {
+        environmentType = environment == 'uat' ? 'testing' : (environment == 'staging' ? 'staging' : 'production')
+        jobLink = "${env.BUILD_URL}"
+      }
+      jiraSendBuildInfo branch: "${environment}", site: "asianscloud.atlassian.net"
+
+      discordSend description: "Project Pipeline for ${project} ${appName} \n Job Name : ${currentBuild.projectName} \n Job Status : ${currentBuild.currentResult}", footer: "", link: "${jobLink}", image: "${imageTag}", result: currentBuild.currentResult, scmWebUrl: '', thumbnail: '', title: "Gaius - ${appName}", webhookURL: "${webHook}"
+    }
+  }
+}
