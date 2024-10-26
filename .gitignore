@@ -283,3 +283,7 @@ gaius_common/media/
 /.settings/
 /.project
 /.pydevproject
+
+# Ignore Poetry files
+poetry.lock
+pyproject.toml

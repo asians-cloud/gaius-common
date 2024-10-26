@@ -1,0 +1,47 @@
+[tool.poetry]
+name = "gaius-common"
+version = "0.1.0"
+description = "Common microservice for V3"
+authors = ["Asians Group LLC <dev.team@asians.cloud>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+fcm-django = "==1.0.12"
+python-telegram-bot = "~=13.3"
+django_telegrambot = "*"
+elasticsearch-dsl = "==8.14.0"
+django-elasticsearch-dsl = "==8.0"
+python = "^3.9.0"
+
+[tool.poetry.group.git.dependencies]
+gaius-user = { git = "https://github.com/asians-cloud/gaius-user", branch = "main" }
+django-keycloak = { git = "https://github.com/asians-cloud/django-keycloak", rev = "e6fb900" }
+django-ajax-selects = { git = "https://github.com/asians-cloud/django-ajax-selects", rev = "1c4c7f8" }
+
+[tool.poetry.group.test.dependencies]
+pytest = "==6.2.5"
+pytest-sugar = "==0.9.4"
+pytest-django = "==4.4.0"
+django-stubs = "~=1.9.0"
+djangorestframework-stubs = "==1.4.0"
+coverage = "==6.1.2"
+mypy = "==0.910"
+watchgod = "==0.7"
+
+[tool.poetry.group.dev.dependencies]
+Werkzeug = "==2.0.2"
+ipdb = "==0.13.9"
+flake8 = "==4.0.1"
+flake8-isort = "==4.1.1"
+black = "==21.10b0"
+pylint-django = "==2.4.4"
+pylint-celery = "==0.3"
+pre-commit = "==2.15.0"
+factory-boy = "==3.2.1"
+django-coverage-plugin = "==2.0.2"
+sphinx = "==4.3.0"
+sphinx-autobuild = "==2021.3.14"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

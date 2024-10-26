@@ -1,9 +1,6 @@
 import uuid
 import requests
 from contextvars import ContextVar
-import logging
-
-logger = logging.getLogger(__name__)
 
 _request_ctx = ContextVar('current_request', default={})
 
@@ -19,9 +16,12 @@ def add_to_request_context(key, value):
     _request_ctx.set(context)
 
 def get_ip_address(request):
+    x_real_ip = request.META.get('HTTP_X_REAL_IP')
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-    logger.info(f"request.META>>>>>>>>>>>>>>{request.META}")
-    if x_forwarded_for:
+    
+    if x_real_ip:
+        ip = x_real_ip
+    elif x_forwarded_for:
         ip = x_forwarded_for.split(',')[0]
     else:
         ip = request.META.get('REMOTE_ADDR')

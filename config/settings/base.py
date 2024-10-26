@@ -392,7 +392,4 @@ if USE_KEYCLOAK is not None:
 # ------------------------------------------------------------------------------
 
 FCM_APIKEY = env.str('FCM_APIKEY', '')
-
-ELASTICSEARCH_API_HOST=env.str('ELASTICSEARCH_API_HOST','')
-ELASTICSEARCH_API_KEY=env.str('ELASTICSEARCH_API_KEY','')
-ELASTICSEARCH_API_KEY=env.str('LOGS_INDEX_V3','change-logs')
+LOGS_INDEX_V3=env.str('LOGS_INDEX_V3','change-logs')
