@@ -31,9 +31,15 @@ pipeline {
     stage('Install Helm Charts') {
       steps {
         container(name: 'helm') {
-          sh 'helm version'
-          sh "helm repo add django https://asians-cloud.github.io/django-helm/charts/"
-          sh "helm repo update"
+          script {
+            sh 'helm version'
+            if (env.environment != 'prod') {
+              sh "helm repo add django https://asians-cloud.github.io/${env.environment}/django-helm/charts/"
+            } else {
+              sh "helm repo add django https://asians-cloud.github.io/django-helm/charts/"
+            }
+            sh "helm repo update"
+          }
         }
       }
     }
