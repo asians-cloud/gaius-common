@@ -465,6 +465,8 @@ class Routes(models.Model):
         tags = {}
         if self.tags:
             for tag in self.tags:
+                if '=' not in tag:
+                    continue
                 key, value = tag.replace('"', "").split("=")
                 tags[key] = value
         return tags
@@ -473,6 +475,11 @@ class Routes(models.Model):
     def cname(self):
         tags = self.tags_to_dict()
         return tags.get("cname", '')
+
+    @property
+    def owner(self):
+        tags = self.tags_to_dict()
+        return tags.get('owner', '')
 
     @property
     def domain_cname(self):
@@ -539,6 +546,8 @@ class Services(models.Model):
     def tags_to_dict(self):
         tags = {}
         for tag in self.tags:
+            if '=' not in tag:
+                continue
             key, value = tag.replace('"', "").split("=")
             tags[key] = value
         return tags
@@ -546,7 +555,12 @@ class Services(models.Model):
     @property
     def cname(self):
         tags = self.tags_to_dict()
-        return tags["cname"]
+        return tags.get("cname", '')
+
+    @property
+    def owner(self):
+        tags = self.tags_to_dict()
+        return tags.get('owner', '')
 
     def save(self, *args, **kwargs):
 
