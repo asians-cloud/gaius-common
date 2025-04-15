@@ -1,7 +1,7 @@
 import uuid, functools
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
-from kong.encoders import UnicodeEscapeEncoder
+from gaius_common.kong.encoders import UnicodeEscapeEncoder
 
 KONG_ROUTE = 1
 KONG_SERVICE = 2
