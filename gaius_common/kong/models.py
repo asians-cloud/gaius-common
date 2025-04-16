@@ -2,7 +2,6 @@ import uuid
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
 from fcm_django.models import FCMDevice
-from gaius_common.kong.encoders import UnicodeEscapeEncoder
 
 KONG_ROUTE = 1
 KONG_SERVICE = 2
@@ -370,7 +369,7 @@ class Plugins(models.Model):
     consumer = models.ForeignKey(Consumers, models.DO_NOTHING, blank=True, null=True)
     service = models.ForeignKey('Services', models.DO_NOTHING, blank=True, null=True, related_name='service_plugins')
     route = models.ForeignKey('Routes', models.DO_NOTHING, blank=True, null=True)
-    config = models.JSONField(encoder=UnicodeEscapeEncoder)
+    config = models.JSONField()
     enabled = models.BooleanField(default=True)
     cache_key = models.TextField(unique=True, blank=True, null=True)
     protocols = ArrayField(models.TextField(), blank=True, null=True, default=["grpc", "grpcs", "http", "https"]) # This field type is a guess.
