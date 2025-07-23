@@ -79,4 +79,6 @@ class KongDBRouter(object):
         """
         Make sure the kong app only appear in the '"kong_database"' database.
         """
+        if app_label in self.route_app_labels:
+            return db == 'kong_database'
         return None
