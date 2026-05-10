@@ -4,12 +4,17 @@ from django.conf import settings
 from telegram.error import TelegramError
 
 
+SLACK_REQUEST_TIMEOUT_SECONDS = 10
+
+
 def send_slack_notification(message):
     slack_webhook_url = settings.SLACK_WEBHOOK_URL
     payload = {
         "text": message
     }
-    response = requests.post(slack_webhook_url, json=payload)        
+    response = requests.post(
+        slack_webhook_url, json=payload, timeout=SLACK_REQUEST_TIMEOUT_SECONDS
+    )
     return True if response.status_code == 200 else False
 
 
