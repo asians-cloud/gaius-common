@@ -23,18 +23,17 @@ setup(
     keywords='django rest auth registration rest-framework django-registration api docker cookiecuter tox pytest',
     zip_safe=False,
     include_package_data=True,
-    python_requires=">=3.8",
+    python_requires=">=3.12",
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
-        'Framework :: Django :: 2.2',
+        'Framework :: Django :: 5.2',
         'Intended Audience :: Developers',
         'Intended Audience :: System Administrators',
         'Operating System :: OS Independent',
         'License :: OSI Approved :: Apache Software License',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.8',
-        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.12',
         'Topic :: Internet :: WWW/HTTP'
     ],
 )
