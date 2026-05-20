@@ -1,6 +1,5 @@
 import requests, logging
 from django.conf import settings
-from django.contrib.auth.models import User
 
 logger = logging.getLogger()
 
@@ -10,6 +9,11 @@ KEYCLOAK_REQUEST_TIMEOUT_SECONDS = 10
 
 
 def update_lastname_keycloak(cname):
+    # Imported lazily: a module-level model import runs at package-import time
+    # (any `import gaius_common.utils.*` triggers this __init__), which raises
+    # AppRegistryNotReady if the app registry isn't loaded yet.
+    from django.contrib.auth.models import User
+
     user = User.objects.get(username__icontains=cname)
     realm = user.oidc_profile.realm.name
 
