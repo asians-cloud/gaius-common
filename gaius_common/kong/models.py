@@ -29,8 +29,8 @@ class Acls(models.Model):
 
     def save(self, *args, **kwargs):
 
-        # First Need to store ws_id in workspaces table
-        self.ws = Workspaces.objects.get()
+        if self.ws_id is None:
+            self.ws = Workspaces.objects.get(name='default')
 
         super(Acls, self).save(*args, **kwargs)
 
@@ -65,8 +65,8 @@ class BasicauthCredentials(models.Model):
 
     def save(self, *args, **kwargs):
 
-        # First Need to store ws_id in workspaces table
-        self.ws = Workspaces.objects.get()
+        if self.ws_id is None:
+            self.ws = Workspaces.objects.get(name='default')
 
         super(BasicauthCredentials, self).save(*args, **kwargs)
 
@@ -102,8 +102,8 @@ class Certificates(models.Model):
 
     def save(self, *args, **kwargs):
 
-        # First Need to store ws_id in workspaces table
-        self.ws = Workspaces.objects.get()
+        if self.ws_id is None:
+            self.ws = Workspaces.objects.get(name='default')
 
         super(Certificates, self).save(*args, **kwargs)
 
@@ -181,8 +181,8 @@ class Consumers(models.Model):
 
     def save(self, *args, **kwargs):
 
-        # First Need to store ws_id in workspaces table
-        self.ws = Workspaces.objects.get()
+        if self.ws_id is None:
+            self.ws = Workspaces.objects.get(name='default')
 
         super(Consumers, self).save(*args, **kwargs)
 
@@ -204,8 +204,8 @@ class HmacauthCredentials(models.Model):
 
     def save(self, *args, **kwargs):
 
-        # First Need to store ws_id in workspaces table
-        self.ws = Workspaces.objects.get()
+        if self.ws_id is None:
+            self.ws = Workspaces.objects.get(name='default')
 
         super(HmacauthCredentials, self).save(*args, **kwargs)
 
@@ -229,8 +229,8 @@ class JwtSecrets(models.Model):
 
     def save(self, *args, **kwargs):
 
-        # First Need to store ws_id in workspaces table
-        self.ws = Workspaces.objects.get()
+        if self.ws_id is None:
+            self.ws = Workspaces.objects.get(name='default')
 
         super(JwtSecrets, self).save(*args, **kwargs)
 
@@ -252,8 +252,8 @@ class KeyauthCredentials(models.Model):
 
     def save(self, *args, **kwargs):
 
-        # First Need to store ws_id in workspaces table
-        self.ws = Workspaces.objects.get()
+        if self.ws_id is None:
+            self.ws = Workspaces.objects.get(name='default')
 
         super(KeyauthCredentials, self).save(*args, **kwargs)
 
@@ -290,8 +290,8 @@ class Oauth2AuthorizationCodes(models.Model):
 
     def save(self, *args, **kwargs):
 
-        # First Need to store ws_id in workspaces table
-        self.ws = Workspaces.objects.get()
+        if self.ws_id is None:
+            self.ws = Workspaces.objects.get(name='default')
 
         super(Oauth2AuthorizationCodes, self).save(*args, **kwargs)
 
@@ -317,8 +317,8 @@ class Oauth2Credentials(models.Model):
 
     def save(self, *args, **kwargs):
 
-        # First Need to store ws_id in workspaces table
-        self.ws = Workspaces.objects.get()
+        if self.ws_id is None:
+            self.ws = Workspaces.objects.get(name='default')
 
         super(Oauth2Credentials, self).save(*args, **kwargs)
 
@@ -345,8 +345,8 @@ class Oauth2Tokens(models.Model):
 
     def save(self, *args, **kwargs):
 
-        # First Need to store ws_id in workspaces table
-        self.ws = Workspaces.objects.get()
+        if self.ws_id is None:
+            self.ws = Workspaces.objects.get(name='default')
 
         super(Oauth2Tokens, self).save(*args, **kwargs)
 
@@ -590,8 +590,8 @@ class Routes(models.Model):
 
     def save(self, *args, **kwargs):
 
-        # First Need to store ws_id in workspaces table
-        self.ws = Workspaces.objects.get()
+        if self.ws_id is None:
+            self.ws = Workspaces.objects.get(name='default')
 
         self.expression = self.get_atc(self)
 
@@ -647,17 +647,18 @@ class Services(models.Model):
 
     def tags_to_dict(self):
         tags = {}
-        for tag in self.tags:
-            if '=' not in tag:
-                continue
-            key, value = tag.replace('"', "").split("=")
-            tags[key] = value
+        if self.tags:
+            for tag in self.tags:
+                if '=' not in tag:
+                    continue
+                key, value = tag.replace('"', "").split("=")
+                tags[key] = value
         return tags
 
     @property
     def cname(self):
         tags = self.tags_to_dict()
-        return tags.get("cname", '')
+        return tags.get("cname", "")
 
     @property
     def owner(self):
@@ -666,8 +667,8 @@ class Services(models.Model):
 
     def save(self, *args, **kwargs):
 
-        # First Need to store ws_id in workspaces table
-        self.ws = Workspaces.objects.get()
+        if self.ws_id is None:
+            self.ws = Workspaces.objects.get(name='default')
 
         if self.port == 80:
             self.protocol = 'http'
@@ -710,8 +711,8 @@ class Snis(models.Model):
 
     def save(self, *args, **kwargs):
 
-        # First Need to store ws_id in workspaces table
-        self.ws = Workspaces.objects.get()
+        if self.ws_id is None:
+            self.ws = Workspaces.objects.get(name='default')
 
         super(Snis, self).save(*args, **kwargs)
 
@@ -747,8 +748,8 @@ class Targets(models.Model):
 
     def save(self, *args, **kwargs):
 
-        # First Need to store ws_id in workspaces table
-        self.ws = Workspaces.objects.get()
+        if self.ws_id is None:
+            self.ws = Workspaces.objects.get(name='default')
 
         # Default port 80
         target_split = self.target.split(':')
@@ -803,8 +804,8 @@ class Upstreams(models.Model):
 
     def save(self, *args, **kwargs):
 
-        # First Need to store ws_id in workspaces table
-        self.ws = Workspaces.objects.get()
+        if self.ws_id is None:
+            self.ws = Workspaces.objects.get(name='default')
         self.hash_fallback = 'none'
         self.hash_on = 'none'
         super(Upstreams, self).save(*args, **kwargs)

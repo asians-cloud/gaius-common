@@ -77,6 +77,12 @@ class KongDBRouter(object):
 
     def allow_migrate(self, db, app_label, model_name=None, **hints):
         """
-        Make sure the kong app only appear in the '"kong_database"' database.
+        Make sure the kong app only appears in the kong_database. Returning
+        None previously left the decision to Django's default (allow), which
+        let kong-app migration records land in the `default` DB on every
+        `manage.py migrate` and was misleading even though the underlying
+        models are managed=False.
         """
+        if app_label in self.route_app_labels:
+            return db == "kong_database"
         return None
