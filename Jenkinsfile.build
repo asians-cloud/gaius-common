@@ -82,12 +82,14 @@ pipeline {
       }
       jiraSendBuildInfo branch: "${environment}", site: "asianscloud.atlassian.net"
 
-      // Telegram replaces the old discordSend (discord webhook was unreachable
-      // from the build network). Token + target group live in Jenkins
-      // credentials, never in the repo. withCredentials is inside the try so a
-      // missing credential or send failure logs but never fails the pipeline.
+      // Telegram notification (replaces discordSend): HTML, status-aware, no
+      // link preview. Credentials live in Jenkins; withCredentials is inside the
+      // try so a missing credential or send failure logs but never fails the run.
       script {
         try {
+          def st   = currentBuild.currentResult ?: 'SUCCESS'
+          def icon = (st == 'SUCCESS') ? '✅' : (st == 'UNSTABLE') ? '⚠️' : (st == 'ABORTED') ? '⚪' : '🔴'
+          def head = (st == 'SUCCESS') ? "${icon} <b>Build · ${appName}</b>" : "${icon} <b>Build ${st} · ${appName}</b> ${icon}\\n🔔 <b>NEEDS ATTENTION</b>"
           withCredentials([
             string(credentialsId: 'telegram-deploy-bot-token', variable: 'TG_BOT_TOKEN'),
             string(credentialsId: 'telegram-deploy-chat-id', variable: 'TG_CHAT_ID'),
@@ -96,7 +98,7 @@ pipeline {
             httpRequest httpMode: 'POST',
               url: "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage",
               contentType: 'APPLICATION_JSON',
-              requestBody: """{"chat_id":"${TG_CHAT_ID}","message_thread_id":${TG_THREAD_ID},"text":"Gaius - ${appName}\nProject Pipeline for ${project} ${appName}\nJob Name : ${currentBuild.projectName}\nJob Status : ${currentBuild.currentResult}\nImage : ${imageTag}\n${jobLink}"}""",
+              requestBody: """{"chat_id":"${TG_CHAT_ID}","message_thread_id":${TG_THREAD_ID},"parse_mode":"HTML","disable_web_page_preview":true,"text":"${head}\\n${project} · #${env.BUILD_NUMBER}\\n🔖 <code>${imageTag}</code>\\n🔗 <a href=\\"${jobLink}\\">open in Jenkins</a>"}""",
               validResponseCodes: '100:599'
           }
         } catch (err) {
