@@ -84,7 +84,27 @@ pipeline {
       }
       jiraSendDeploymentInfo environmentId: "${environment}", environmentName: "${environment}", environmentType: "${environmentType}", site: "asianscloud.atlassian.net"
 
-      discordSend description: "Deployment Pipeline for ${project} ${appName} \n Job Name : ${currentBuild.projectName} \n Job Status : ${currentBuild.currentResult}", footer: "", link: "${jobLink}", image: '', result: currentBuild.currentResult, scmWebUrl: '', thumbnail: '', title: "Gaius - ${appName}", webhookURL: "${webHook}"
+      // Telegram replaces the old discordSend (discord webhook was unreachable
+      // from the build network). Token + target group live in Jenkins
+      // credentials, never in the repo. withCredentials is inside the try so a
+      // missing credential or send failure logs but never fails the pipeline.
+      script {
+        try {
+          withCredentials([
+            string(credentialsId: 'telegram-deploy-bot-token', variable: 'TG_BOT_TOKEN'),
+            string(credentialsId: 'telegram-deploy-chat-id', variable: 'TG_CHAT_ID'),
+            string(credentialsId: 'telegram-deploy-thread-id', variable: 'TG_THREAD_ID')
+          ]) {
+            httpRequest httpMode: 'POST',
+              url: "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage",
+              contentType: 'APPLICATION_JSON',
+              requestBody: """{"chat_id":"${TG_CHAT_ID}","message_thread_id":${TG_THREAD_ID},"text":"Gaius - ${appName}\nDeployment Pipeline for ${project} ${appName}\nJob Name : ${currentBuild.projectName}\nJob Status : ${currentBuild.currentResult}\n${jobLink}"}""",
+              validResponseCodes: '100:599'
+          }
+        } catch (err) {
+          echo "Telegram notification failed: ${err}"
+        }
+      }
     }
   }
 }
