@@ -25,41 +25,98 @@ def _ptb_is_async():
     return int(telegram.__version__.split(".")[0]) >= 20
 
 
+def _parse_chat_id(chat_id):
+    """
+    Supports:
+        -1001234567890
+        "-1001234567890"
+        "-1001234567890_74"
+
+    Returns:
+        (chat_id, message_thread_id)
+    """
+
+    if isinstance(chat_id, str) and "_" in chat_id:
+        base_chat_id, thread_id = chat_id.split("_", 1)
+        return int(base_chat_id), int(thread_id)
+
+    return int(chat_id), None
+
+
 def _send_once(bot, chat_id, message, parse_mode, disable_web_page_preview, timeout):
     """Send one message, compatible with python-telegram-bot v13 and v20+.
 
     On v20+ Bot.send_message is a coroutine and the bot must be initialized
     before use, so we drive it on a fresh event loop inside `async with bot:`
     (the supported pattern for a standalone Bot, e.g. from a Celery worker).
-    The v13-only `timeout` kwarg was removed and `disable_web_page_preview`
-    became `link_preview_options`.
+
+    Supports Telegram forum topics automatically via:
+        -1001234567890_74
     """
+
+    parsed_chat_id, message_thread_id = _parse_chat_id(chat_id)
+
+    kwargs = {
+        "chat_id": parsed_chat_id,
+        "text": message,
+        "parse_mode": parse_mode,
+    }
+
+    if message_thread_id is not None:
+        kwargs["message_thread_id"] = message_thread_id
+
     if not _ptb_is_async():
-        bot.send_message(
-            chat_id=chat_id, text=message, parse_mode=parse_mode,
-            disable_web_page_preview=disable_web_page_preview, timeout=timeout,
-        )
+        kwargs["disable_web_page_preview"] = disable_web_page_preview
+        kwargs["timeout"] = timeout
+
+        bot.send_message(**kwargs)
         return
 
     async def _send():
-        kwargs = {"chat_id": chat_id, "text": message, "parse_mode": parse_mode}
         if disable_web_page_preview:
             from telegram import LinkPreviewOptions
-            kwargs["link_preview_options"] = LinkPreviewOptions(is_disabled=True)
+
+            kwargs["link_preview_options"] = LinkPreviewOptions(
+                is_disabled=True
+            )
+
         async with bot:
             await bot.send_message(**kwargs)
 
     asyncio.run(_send())
 
 
-def send_telegram_notification(bot, chat_id, message, parse_mode=None, disable_web_page_preview=False, timeout=None):
+def send_telegram_notification(
+    bot,
+    chat_id,
+    message,
+    parse_mode=None,
+    disable_web_page_preview=False,
+    timeout=None
+):
     try:
-        _send_once(bot, chat_id, message, parse_mode, disable_web_page_preview, timeout)
+        _send_once(
+            bot,
+            chat_id,
+            message,
+            parse_mode,
+            disable_web_page_preview,
+            timeout,
+        )
         return True
+
     except Exception:
         try:
-            _send_once(bot, chat_id, message, parse_mode, disable_web_page_preview, timeout)
+            _send_once(
+                bot,
+                chat_id,
+                message,
+                parse_mode,
+                disable_web_page_preview,
+                timeout,
+            )
             return True
+
         except Exception as e:
             message = f"""
                 {message}
@@ -73,4 +130,7 @@ def send_telegram_notification(bot, chat_id, message, parse_mode=None, disable_w
                 *Traceback:*
                 {traceback.format_exc()}
             """
+
             send_slack_notification(message=message)
+
+            return False
