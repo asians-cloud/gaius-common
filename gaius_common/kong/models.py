@@ -540,6 +540,9 @@ class Services(models.Model):
         tags = {}
         if self.tags:
             for tag in self.tags:
+                # Skip tags that don't have an = sign
+                if '=' not in tag:
+                    continue
                 key, value = tag.replace('"', "").split("=")
                 tags[key] = value
         return tags
