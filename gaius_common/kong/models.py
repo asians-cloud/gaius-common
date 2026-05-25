@@ -549,6 +549,11 @@ class Services(models.Model):
         tags = self.tags_to_dict()
         return tags.get("cname", "")
 
+    @property
+    def owner(self):
+        tags = self.tags_to_dict()
+        return tags.get('owner', '')
+
     def save(self, *args, **kwargs):
 
         if self.ws_id is None:
