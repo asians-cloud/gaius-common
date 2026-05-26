@@ -539,6 +539,9 @@ class Services(models.Model):
         tags = {}
         if self.tags:
             for tag in self.tags:
+                # Skip tags that don't have an = sign
+                if '=' not in tag:
+                    continue
                 key, value = tag.replace('"', "").split("=")
                 tags[key] = value
         return tags
@@ -547,6 +550,11 @@ class Services(models.Model):
     def cname(self):
         tags = self.tags_to_dict()
         return tags.get("cname", "")
+
+    @property
+    def owner(self):
+        tags = self.tags_to_dict()
+        return tags.get('owner', '')
 
     def save(self, *args, **kwargs):
 
