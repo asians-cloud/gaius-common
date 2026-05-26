@@ -104,6 +104,55 @@ sh pkg_add.sh
 ```
 
 
+## Architecture Notes
+
+### Shared models (`gaius_common.models`)
+
+`gaius-common` is installed as a dependency by the other gaius services
+(gaius-domain, gaius-cert, gaius-route, ...). Those services import shared ORM
+models from a single surface:
+
+```python
+from gaius_common.models import Routes, Services, FCMDevice
+```
+
+`gaius_common/models.py` aggregates two groups of models:
+
+- **Kong gateway tables** — `managed = False` mirrors of Kong's schema, defined
+  in `gaius_common/kong/models.py` and routed to `kong_database` by
+  `KongDBRouter` (`gaius_common/dbrouter.py`).
+- **`FCMDevice`** — the push-notification device registry from the third-party
+  `fcm_django` app, routed to the `common` database by `AuthRouter`.
+
+> **Note:** `FCMDevice` is *re-exported*, not redefined. Editing
+> `gaius_common.models` or removing the `fcm_django` import there will break
+> downstream services that do `from gaius_common.models import FCMDevice`.
+
+### Push notifications (FCM)
+
+This package **owns the `fcm_django_fcmdevice` table** (in the shared `common`
+DB); the actual push logic lives in the consuming services. The feature is
+live in production. End-to-end flow:
+
+1. **Register** — the frontend (gaius-console) obtains a Firebase token and
+   POSTs it to gaius-domain's `FCMRegisterView` (`domain/fcm-register/`), which
+   creates/updates an `FCMDevice` row for the user.
+2. **Send** — batch operations (clear cache, enable/disable HTTPS, import) run
+   as celery tasks that call `send_user_fcm_notification(user_id, type)` in each
+   service's `utils/redis_notification.py`. It looks up the user's latest
+   `FCMDevice` and pushes via `pyfcm` using `FCM_DJANGO_SETTINGS['FCM_SERVER_KEY']`.
+3. **In-app list** — on a successful push, the same function also writes the
+   notification to Redis via `add_notification`; the frontend polls
+   `domain/notify/` to render it. Note this in-app list is gated on the FCM
+   send path, so a user with **no registered device gets neither** a push nor
+   an in-app notification.
+
+Relevant settings: `fcm_django` in `INSTALLED_APPS`, vendored migrations under
+`gaius_common/contrib/fcm_django/migrations` (pinned via `MIGRATION_MODULES`),
+`fcm_django` routed to `common` in `dbrouter.py`, and `FCM_APIKEY` /
+`FCM_SERVER_KEY` env vars (the latter defined as `FCM_DJANGO_SETTINGS` in the
+consuming services).
+
 ## Deployment
 
 - Make sure any new environment variable you need is added to the env.yaml.j2 under /charts

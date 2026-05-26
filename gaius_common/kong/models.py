@@ -1,7 +1,6 @@
 import uuid
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
-from fcm_django.models import FCMDevice
 
 KONG_ROUTE = 1
 KONG_SERVICE = 2
