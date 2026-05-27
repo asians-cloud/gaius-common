@@ -41,7 +41,14 @@ def _get(path, params=None):
         resp = requests.get(
             url,
             params=params or {},
-            headers={"Authorization": f"Token {token}"},
+            headers={
+                "Authorization": f"Token {token}",
+                # In-cluster calls are plain HTTP, but Plan runs
+                # SECURE_SSL_REDIRECT=True. Assert the request is already
+                # "secure" (Plan trusts X-Forwarded-Proto via
+                # SECURE_PROXY_SSL_HEADER) so it isn't 301-redirected to https.
+                "X-Forwarded-Proto": "https",
+            },
             timeout=timeout,
         )
         resp.raise_for_status()
