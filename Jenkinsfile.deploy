@@ -58,6 +58,21 @@ pipeline {
       }
     }
 
+    stage('Tag :latest in ACR') {
+      environment {
+        PATH = "/busybox:/kaniko:$PATH"
+      }
+      steps {
+        container(name: 'kaniko', shell: '/busybox/sh') {
+          sh """#!/busybox/sh
+          mkdir -p /tmp/retag
+          echo "FROM ${acrUrl}/${project}/${appName}:${imageTag}" > /tmp/retag/Dockerfile
+          /kaniko/executor -f /tmp/retag/Dockerfile -c /tmp/retag --skip-tls-verify --destination=${acrUrl}/${project}/${appName}:latest
+          """
+        }
+      }
+    }
+
     stage('Confirmation') {
       steps {
         script {
