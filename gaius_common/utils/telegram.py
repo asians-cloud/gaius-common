@@ -2,8 +2,10 @@
 
 All notifications go to ONE Telegram forum group, addressed per topic via the
 ``-100<group>_<message_thread_id>`` syntax that :func:`send_telegram_notification`
-understands. Slack has been retired; on a failed Telegram send we fall back to a
-Discord webhook (kept silent/unconfigured for now — see ``_discord_fallback``).
+understands. Slack and Discord have been retired; on a failed Telegram send we
+fall back to a Google Chat space webhook (silent no-op until the
+``NOTIFICATION_GCHAT_FALLBACK_WEBHOOK`` env/setting is configured — see
+``_gchat_fallback``).
 
 This module is the canonical home for the sender (it used to live, misnamed, in
 ``gaius_common.utils.slack``). Each service maps its own ``BotGroup`` logical
@@ -16,6 +18,7 @@ import logging
 import os
 import traceback
 
+import requests
 import telegram
 from telegram import constants
 from django.conf import settings
@@ -244,21 +247,29 @@ def send_long_message_as_reply(bot, notify_message, chat_id, parse_mode):
 
 # --- Discord fallback (silent until a webhook is configured) ----------------
 
-def _discord_fallback(message):
+_GCHAT_REQUEST_TIMEOUT_SECONDS = 10
+
+
+def _gchat_fallback(message):
     """Last-resort delivery when Telegram is unreachable.
 
-    Slack is retired; a brand-new Discord server/webhook will become the
-    fallback. Until ``settings.NOTIFICATION_DISCORD_FALLBACK_WEBHOOK`` is set
-    this is a silent no-op, so a Telegram outage degrades quietly rather than
-    erroring. Never raises — it is only ever called from an except branch.
+    Posts to a Google Chat space via an incoming-webhook URL read from
+    ``settings.NOTIFICATION_GCHAT_FALLBACK_WEBHOOK`` (or the env var of the same
+    name). Until that is set this is a silent no-op, so a Telegram outage
+    degrades quietly rather than erroring. Never raises — it is only ever called
+    from an except branch.
     """
-    webhook_url = getattr(settings, "NOTIFICATION_DISCORD_FALLBACK_WEBHOOK", "")
+    webhook_url = (
+        getattr(settings, "NOTIFICATION_GCHAT_FALLBACK_WEBHOOK", "")
+        or os.environ.get("NOTIFICATION_GCHAT_FALLBACK_WEBHOOK", "")
+    )
     if not webhook_url:
         return False
     try:
-        from django_log_to_discord.discord import QueueBot
-
-        QueueBot(webhook_url=webhook_url, body=message).sendMessage()
+        requests.post(
+            webhook_url, json={"text": message},
+            timeout=_GCHAT_REQUEST_TIMEOUT_SECONDS,
+        )
         return True
     except Exception:
         return False
@@ -303,7 +314,7 @@ def send_telegram_notification(
                 {traceback.format_exc()}
             """
 
-            _discord_fallback(message)
+            _gchat_fallback(message)
 
             return False
 
@@ -333,7 +344,7 @@ class _RequestMetaFormatter(logging.Formatter):
 class TelegramLogHandler(logging.Handler):
     """Django logging handler that posts log records to a Telegram topic.
 
-    Replaces ``django_log_to_discord.log.AdminDiscordHandler`` and the v13-only
+    Replaces the old ``django_log_to_discord`` AdminDiscordHandler and the v13-only
     ``django_log_to_telegram.log.AdminTelegramHandler``. Configure one handler
     per level/topic, e.g. CRITICAL -> Topic.CRITICAL_ERRORS and
     ERROR -> Topic.APP_ERRORS, both pointed at the service's own bot token.
