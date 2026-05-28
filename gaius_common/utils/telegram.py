@@ -24,6 +24,34 @@ from telegram import constants
 from django.conf import settings
 
 
+# Telegram caps a text message at 4096 chars. The constant moved between
+# python-telegram-bot majors (v13: ``MAX_MESSAGE_LENGTH``; v20+:
+# ``constants.MessageLimit.MAX_TEXT_LENGTH``), so resolve it defensively and
+# fall back to the documented hard limit.
+try:
+    MAX_MESSAGE_LENGTH = int(constants.MessageLimit.MAX_TEXT_LENGTH)
+except AttributeError:  # python-telegram-bot < 20
+    MAX_MESSAGE_LENGTH = int(getattr(constants, "MAX_MESSAGE_LENGTH", 4096))
+
+
+def _truncate_for_telegram(message):
+    """Guarantee a single message fits Telegram's limit.
+
+    Keeps the head and tail and elides the middle, because for tracebacks both
+    ends matter: the head carries the request/context and the tail the actual
+    exception. Truncating (rather than splitting into N sends) keeps a noisy
+    error log to one message and, crucially, prevents the "Message is too long"
+    BadRequest that otherwise forces the Google Chat fallback.
+    """
+    if len(message) <= MAX_MESSAGE_LENGTH:
+        return message
+    marker = "\n\n[... truncated ...]\n\n"
+    budget = MAX_MESSAGE_LENGTH - len(marker)
+    head = budget // 2
+    tail = budget - head
+    return message[:head] + marker + message[-tail:]
+
+
 # --- Notification group + topics -------------------------------------------
 #
 # Single source of truth for where notifications land. The group id can be
@@ -141,7 +169,7 @@ def _send_once(bot, chat_id, message, parse_mode, disable_web_page_preview, time
 
     kwargs = {
         "chat_id": parsed_chat_id,
-        "text": message,
+        "text": _truncate_for_telegram(message),
         "parse_mode": parse_mode,
     }
 
@@ -175,18 +203,18 @@ def _split_message(notify_message):
     msg = notify_message
     sub_msgs = []
     while len(msg):
-        split_point = msg[:constants.MAX_MESSAGE_LENGTH].rfind('\n')
+        split_point = msg[:MAX_MESSAGE_LENGTH].rfind('\n')
         if split_point != -1:
             sub_msgs.append(msg[:split_point])
             msg = msg[split_point + 1:]
         else:
-            split_point = msg[:constants.MAX_MESSAGE_LENGTH].rfind('. ')
+            split_point = msg[:MAX_MESSAGE_LENGTH].rfind('. ')
             if split_point != -1:
                 sub_msgs.append(msg[:split_point + 1])
                 msg = msg[split_point + 2:]
             else:
-                sub_msgs.append(msg[:constants.MAX_MESSAGE_LENGTH])
-                msg = msg[constants.MAX_MESSAGE_LENGTH:]
+                sub_msgs.append(msg[:MAX_MESSAGE_LENGTH])
+                msg = msg[MAX_MESSAGE_LENGTH:]
     return sub_msgs
 
 
@@ -201,7 +229,7 @@ def send_long_message_as_reply(bot, notify_message, chat_id, parse_mode):
 
     if int(telegram.__version__.split(".")[0]) < 20:
         # python-telegram-bot v13 (sync) path.
-        if len(notify_message) > constants.MAX_MESSAGE_LENGTH:
+        if len(notify_message) > MAX_MESSAGE_LENGTH:
             sub_msgs = _split_message(notify_message)
             message = bot.send_message(chat_id=parsed_chat_id, text=sub_msgs[0],
                                        parse_mode=parse_mode, disable_web_page_preview=True,
@@ -225,7 +253,7 @@ def send_long_message_as_reply(bot, notify_message, chat_id, parse_mode):
     async def _run():
         no_preview = LinkPreviewOptions(is_disabled=True)
         async with bot:
-            if len(notify_message) > constants.MAX_MESSAGE_LENGTH:
+            if len(notify_message) > MAX_MESSAGE_LENGTH:
                 sub_msgs = _split_message(notify_message)
                 message = await bot.send_message(
                     chat_id=parsed_chat_id, text=sub_msgs[0], parse_mode=parse_mode,
