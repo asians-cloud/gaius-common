@@ -303,6 +303,55 @@ def _gchat_fallback(message):
         return False
 
 
+def _telegram_error_details(exc):
+    """Summarise a failed Telegram send for the fallback report.
+
+    python-telegram-bot raises typed errors (``BadRequest``, ``Forbidden`` …)
+    but does not attach the raw HTTP status to the exception object, so we map
+    the well-known error classes to the status Telegram returned. Returns a
+    short line like ``HTTP 400 BadRequest: Can't parse entities: ...`` — the API
+    status code plus the reason Telegram gave — so an operator can tell a
+    message-formatting bug (400) from an auth (401/403) or rate-limit (429)
+    problem at a glance instead of reading the traceback.
+    """
+    name = type(exc).__name__
+    reason = str(exc) or repr(exc)
+
+    # Some PTB versions (or wrapped HTTP errors) expose the code directly.
+    status = None
+    for attr in ("status_code", "code"):
+        value = getattr(exc, attr, None)
+        if isinstance(value, int):
+            status = value
+            break
+
+    if status is None:
+        try:
+            from telegram import error as tg_error
+        except Exception:
+            tg_error = None
+        if tg_error is not None:
+            # Most specific classes first so a subclass isn't shadowed by its base.
+            status_by_class = [
+                ("RetryAfter", 429),
+                ("Conflict", 409),
+                ("Forbidden", 403),
+                ("Unauthorized", 401),
+                ("InvalidToken", 401),
+                ("ChatMigrated", 400),
+                ("BadRequest", 400),
+                ("TimedOut", 504),
+            ]
+            for cls_name, code in status_by_class:
+                cls = getattr(tg_error, cls_name, None)
+                if cls is not None and isinstance(exc, cls):
+                    status = code
+                    break
+
+    status_text = "HTTP %d" % status if status is not None else "no HTTP status"
+    return "%s %s: %s" % (status_text, name, reason)
+
+
 def send_telegram_notification(
     bot,
     chat_id,
@@ -333,7 +382,7 @@ def send_telegram_notification(
                 {message}
 
                 *Error:*
-                {str(e)}
+                {_telegram_error_details(e)}
 
                 *File Path:*
                 {traceback.extract_tb(e.__traceback__)[-1]}
