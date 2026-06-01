@@ -16,6 +16,8 @@ only the destination moved.
 import asyncio
 import logging
 import os
+import threading
+import time
 import traceback
 
 import requests
@@ -429,23 +431,56 @@ class TelegramLogHandler(logging.Handler):
     Sends as plain text (no parse_mode) so raw tracebacks can't trip Telegram's
     HTML/Markdown parser. Failures degrade to the Discord fallback and never
     propagate back into logging, so there is no recursion risk.
+
+    **Throttling/dedup:** repeats of the same error signature (logger + level +
+    call site + message template) are suppressed within ``throttle_seconds``
+    (default 60) so a hot error path can't flood the topic. The first send after
+    a window appends a ``(+N similar suppressed …)`` note with the count dropped
+    during the window. State is per-process and shared across handler instances.
     """
+
+    # Process-wide throttle state (shared by all handler instances so the
+    # network send happens outside the lock).
+    _throttle_lock = threading.Lock()
+    _last_sent = {}        # signature -> monotonic ts of last send
+    _suppressed = {}       # signature -> count suppressed since last send
 
     def __init__(self, *args, **kwargs):
         super().__init__()
         self.bot_token = kwargs.get('bot_token') or kwargs.get('bot_id')
         self.chat_id = kwargs.get('chat_id')
         self.service = kwargs.get('service', '')
+        self.throttle_seconds = int(kwargs.get('throttle_seconds', 60))
         self.setFormatter(_RequestMetaFormatter())
+
+    def _signature(self, record):
+        # Group by call site + level + raw message template (not the formatted
+        # message, which may carry per-event values), so identical errors collapse.
+        return f"{record.name}:{record.levelno}:{record.pathname}:{record.lineno}:{str(record.msg)[:200]}"
 
     def emit(self, record):
         try:
+            sig = self._signature(record)
+            now = time.monotonic()
+            with self._throttle_lock:
+                last = self._last_sent.get(sig)
+                if last is not None and (now - last) < self.throttle_seconds:
+                    # Within the cooldown for this signature — count and drop.
+                    self._suppressed[sig] = self._suppressed.get(sig, 0) + 1
+                    return
+                suppressed = self._suppressed.pop(sig, 0)
+                self._last_sent[sig] = now
+
             bot = telegram.Bot(self.bot_token)
             prefix = f"[{self.service}] " if self.service else ""
+            text = prefix + self.format(record)
+            if suppressed:
+                text += (f"\n\n(+{suppressed} similar suppressed in the last "
+                         f"{self.throttle_seconds}s)")
             send_telegram_notification(
                 bot,
                 self.chat_id,
-                prefix + self.format(record),
+                text,
                 parse_mode=None,
             )
         except Exception:
