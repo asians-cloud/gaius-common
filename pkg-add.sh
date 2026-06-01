@@ -14,7 +14,7 @@
 # ./pkg-add
 
 # Define the TOML files
-TOML_FILES=("pyproject.uat.toml" "pyproject.staging.toml" "pyproject.prod.toml")
+TOML_FILES=("pyproject.prod.toml")
 
 # Prompt dev for package name
 read -p "Enter the package name: " PACKAGE_NAME
@@ -134,7 +134,7 @@ for toml_file in "${TOML_FILES[@]}"; do
 done
 
 # Pick the environment variable
-ENVIRON="${ENVIRON:-uat}"
+ENVIRON="${ENVIRON:-prod}"
 
 # Copy the appropriate TOML file
 cp "pyproject.${ENVIRON}.toml" pyproject.toml
