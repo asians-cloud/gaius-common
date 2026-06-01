@@ -31,10 +31,10 @@ This activates the virtualenv and allows interacting with our application using 
 ## Setting Up the Project
 
 1. Environment Variables
-It is suggested to have build.uat.env.py file in the parent directory of this repository. Necessary env variables can then be loaded as follows.
+It is suggested to have build.prod.env.py file in the parent directory of this repository. Necessary env variables can then be loaded as follows.
 ```bash
 cd ../
-python build.uat.env.py
+python build.prod.env.py
 ```
 Following that, execute the first three commands returned by the above script. Note that if you are using a shell that colorizes grep, pass the `--color=never` flag as well.
 
@@ -157,7 +157,7 @@ consuming services).
 
 - Make sure any new environment variable you need is added to the env.yaml.j2 under /charts
 - Make sure you add the associated Jira Key in your commit message.
-- After publishing the code to either UAT, Staging or Main branch, trigger a deployment from Jenkins.
+- After publishing the code to the Main branch, trigger a deployment from Jenkins.
 
 ### Additional Resources
 - [Django Documentation](https://docs.djangoproject.com/en/stable/)
