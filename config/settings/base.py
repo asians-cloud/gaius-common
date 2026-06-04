@@ -107,7 +107,6 @@ THIRD_PARTY_APPS = [
     'rest_auth',
     "corsheaders",
     "django_celery_results",
-    'fcm_django',
 ]
 
 LOCAL_APPS = [
@@ -124,7 +123,6 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 # https://docs.djangoproject.com/en/dev/ref/settings/#migration-modules
 MIGRATION_MODULES = {
     "sites": "gaius_common.contrib.sites.migrations",
-    "fcm_django": "gaius_common.contrib.fcm_django.migrations",
     "common": "gaius_common.contrib.common.migrations"
 }
 
@@ -385,5 +383,4 @@ if USE_KEYCLOAK is not None:
 # Your stuff...
 # ------------------------------------------------------------------------------
 
-FCM_APIKEY = env.str('FCM_APIKEY', '')
 LOGS_INDEX_V3=env.str('LOGS_INDEX_V3','change-logs')
