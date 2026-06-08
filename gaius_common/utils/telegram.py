@@ -354,6 +354,24 @@ def _telegram_error_details(exc):
     return "%s %s: %s" % (status_text, name, reason)
 
 
+def _is_parse_entities_error(exc):
+    """True when Telegram rejected the message for bad parse_mode markup.
+
+    A ``BadRequest: Can't parse entities`` is deterministic: it depends only on
+    the message text + parse_mode, so retrying the identical call always fails
+    the same way and needlessly degrades to the Google Chat fallback. Detecting
+    it lets the retry drop parse_mode and still land the message in Telegram.
+    """
+    try:
+        from telegram import error as tg_error
+        bad_request = getattr(tg_error, "BadRequest", None)
+        if bad_request is not None and not isinstance(exc, bad_request):
+            return False
+    except Exception:
+        pass
+    return "can't parse entities" in str(exc).lower()
+
+
 def send_telegram_notification(
     bot,
     chat_id,
@@ -372,10 +390,15 @@ def send_telegram_notification(
         )
         return True
 
-    except Exception:
+    except Exception as first_exc:
+        # A parse-entities error is deterministic, so retrying the same HTML
+        # fails identically. Drop parse_mode on the retry: the message still
+        # reaches Telegram (markup shows as literal text) instead of degrading
+        # all the way to the Google Chat fallback. Any other error retries as-is.
+        retry_parse_mode = None if _is_parse_entities_error(first_exc) else parse_mode
         try:
             _send_once(
-                bot, chat_id, message, parse_mode, disable_web_page_preview, timeout,
+                bot, chat_id, message, retry_parse_mode, disable_web_page_preview, timeout,
             )
             return True
 
