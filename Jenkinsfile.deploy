@@ -51,7 +51,7 @@ pipeline {
           
           withKubeConfig([credentialsId: 'k8s-gaius']) {
             dir("chart") {
-              sh "helm upgrade --install ${serviceName} $helmChart -f ./env.yaml --set image.tag=${imageTag} --wait"
+              sh "helm upgrade --install ${serviceName} $helmChart -f ./env.yaml --set image.tag=${imageTag} --wait --timeout 10m --atomic"
             }
           }
         }
