@@ -275,7 +275,7 @@ def send_long_message_as_reply(bot, notify_message, chat_id, parse_mode):
     asyncio.run(_run())
 
 
-# --- Discord fallback (silent until a webhook is configured) ----------------
+# --- Google Chat fallback (silent until a webhook is configured) ------------
 
 _GCHAT_REQUEST_TIMEOUT_SECONDS = 10
 
@@ -380,7 +380,7 @@ def send_telegram_notification(
     disable_web_page_preview=False,
     timeout=None
 ):
-    """Send a notification to Telegram (one retry), falling back to Discord.
+    """Send a notification to Telegram (one retry), falling back to Google Chat.
 
     ``chat_id`` is normally a :class:`Topic` constant, e.g. ``Topic.PAYMENTS``.
     """
@@ -446,13 +446,13 @@ class _RequestMetaFormatter(logging.Formatter):
 class TelegramLogHandler(logging.Handler):
     """Django logging handler that posts log records to a Telegram topic.
 
-    Replaces the old ``django_log_to_discord`` AdminDiscordHandler and the v13-only
-    ``django_log_to_telegram.log.AdminTelegramHandler``. Configure one handler
+    Replaces the old per-service log handlers (the retired Discord one and the
+    v13-only ``django_log_to_telegram.log.AdminTelegramHandler``). Configure one handler
     per level/topic, e.g. CRITICAL -> Topic.CRITICAL_ERRORS and
     ERROR -> Topic.APP_ERRORS, both pointed at the service's own bot token.
 
     Sends as plain text (no parse_mode) so raw tracebacks can't trip Telegram's
-    HTML/Markdown parser. Failures degrade to the Discord fallback and never
+    HTML/Markdown parser. Failures degrade to the Google Chat fallback and never
     propagate back into logging, so there is no recursion risk.
 
     **Throttling/dedup:** repeats of the same error signature (logger + level +
