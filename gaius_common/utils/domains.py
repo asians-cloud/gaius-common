@@ -5,7 +5,6 @@ Created on Oct 30, 2021
 
 import logging
 import re
-import ssl
 import subprocess
 from abc import ABC
 
@@ -265,7 +264,7 @@ class DomainChecker(ABC):
                 if domain.sslConfigEnabled is False:
                     raise RuntimeError("HTTPS is required")
 
-                return self.source_visit_https(domain)
+                return self.source_visit_https(domain, self.cname, source)
 
             url = "%(scheme)s://%(hostname)s:%(port)s" % source
 
@@ -277,7 +276,7 @@ class DomainChecker(ABC):
                 if r.headers["Location"].startswith("https://%s" % domain):
                     source["scheme"] = "https"
                     source["port"] = 443
-                    checkRs = self.source_visit_https(domain, source)
+                    checkRs = self.source_visit_https(domain, self.cname, source)
                     if checkRs:
                         full_url = "%(scheme)s://%(hostname)s:%(port)s" % source
                         domain.sourceConfig["full_url"] = full_url
@@ -318,10 +317,10 @@ class DomainChecker(ABC):
     #             ])
 
     def site_visit(self, domain, scheme="http", check_url=None):
-        if check_url:
+        if not check_url:
             check_url = "%s://%s/" % (scheme, domain)
         try:
-            requests.get(check_url, verify=ssl.CERT_NONE, timeout=5)
+            requests.get(check_url, verify=True, timeout=5)
         except SSLError:
             raise RuntimeError("SSL Error3")
         except Exception as e:
@@ -352,7 +351,7 @@ class DomainChecker(ABC):
 
     def ssl_visit(self, domain):
         try:
-            requests.get("https://%s/" % domain.name, verify=ssl.CERT_NONE, timeout=2)
+            requests.get("https://%s/" % domain.name, verify=True, timeout=2)
         except SSLError:
             raise RuntimeError("SSL Error")
         except Exception as e:

@@ -28,7 +28,17 @@ def update_lastname_keycloak(cname):
         },
         timeout=KEYCLOAK_REQUEST_TIMEOUT_SECONDS,
     )
-    access_token = token.json()["access_token"]
+    if token.status_code != 200:
+        logger.error(
+            "Failed to obtain Keycloak token for realm %s (status %s)",
+            realm,
+            token.status_code,
+        )
+        return
+    access_token = token.json().get("access_token")
+    if not access_token:
+        logger.error("Keycloak token response missing access_token for realm %s", realm)
+        return
     response = requests.put(
         f"https://{settings.KEYCLOAK_CREDENTIALS[realm]['domain']}/auth/admin/realms/{realm}/users/{user.username}",
         json={"lastName": cname},
