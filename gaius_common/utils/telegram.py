@@ -13,6 +13,7 @@ names onto the :class:`Topic` constants below, so existing call sites
 (``send_telegram_notification(bot, BotGroup.X, msg)``) keep working unchanged —
 only the destination moved.
 """
+
 import asyncio
 import logging
 import os
@@ -22,9 +23,8 @@ import traceback
 
 import requests
 import telegram
-from telegram import constants
 from django.conf import settings
-
+from telegram import constants
 
 # Telegram caps a text message at 4096 chars. The constant moved between
 # python-telegram-bot majors (v13: ``MAX_MESSAGE_LENGTH``; v20+:
@@ -98,6 +98,7 @@ class Topic:
 
 
 # --- python-telegram-bot v13/v20 compatibility ------------------------------
+
 
 def _ptb_is_async():
     """python-telegram-bot made Bot methods coroutines in v20."""
@@ -199,21 +200,22 @@ def _send_once(bot, chat_id, message, parse_mode, disable_web_page_preview, time
 
 # --- Long-message splitting (used by gaius-domain traffic alerts) -----------
 
+
 def _split_message(notify_message):
     """Split a long message into chunks under MAX_MESSAGE_LENGTH, preferring
     to break on newlines, then sentence boundaries, then a hard cut."""
     msg = notify_message
     sub_msgs = []
     while len(msg):
-        split_point = msg[:MAX_MESSAGE_LENGTH].rfind('\n')
+        split_point = msg[:MAX_MESSAGE_LENGTH].rfind("\n")
         if split_point != -1:
             sub_msgs.append(msg[:split_point])
-            msg = msg[split_point + 1:]
+            msg = msg[split_point + 1 :]
         else:
-            split_point = msg[:MAX_MESSAGE_LENGTH].rfind('. ')
+            split_point = msg[:MAX_MESSAGE_LENGTH].rfind(". ")
             if split_point != -1:
-                sub_msgs.append(msg[:split_point + 1])
-                msg = msg[split_point + 2:]
+                sub_msgs.append(msg[: split_point + 1])
+                msg = msg[split_point + 2 :]
             else:
                 sub_msgs.append(msg[:MAX_MESSAGE_LENGTH])
                 msg = msg[MAX_MESSAGE_LENGTH:]
@@ -233,18 +235,30 @@ def send_long_message_as_reply(bot, notify_message, chat_id, parse_mode):
         # python-telegram-bot v13 (sync) path.
         if len(notify_message) > MAX_MESSAGE_LENGTH:
             sub_msgs = _split_message(notify_message)
-            message = bot.send_message(chat_id=parsed_chat_id, text=sub_msgs[0],
-                                       parse_mode=parse_mode, disable_web_page_preview=True,
-                                       timeout=35, **thread_kwargs).result()
+            message = bot.send_message(
+                chat_id=parsed_chat_id,
+                text=sub_msgs[0],
+                parse_mode=parse_mode,
+                disable_web_page_preview=True,
+                timeout=35,
+                **thread_kwargs,
+            ).result()
             for send_msg in sub_msgs[1:]:
                 try:
                     message.reply_html(send_msg)
                 except Exception:
                     import time
+
                     time.sleep(15)
         else:
-            bot.send_message(chat_id=parsed_chat_id, text=notify_message, parse_mode=parse_mode,
-                             disable_web_page_preview=True, timeout=35, **thread_kwargs).result()
+            bot.send_message(
+                chat_id=parsed_chat_id,
+                text=notify_message,
+                parse_mode=parse_mode,
+                disable_web_page_preview=True,
+                timeout=35,
+                **thread_kwargs,
+            ).result()
         return
 
     # python-telegram-bot v20+ (async) path. send_message/reply_html are
@@ -258,8 +272,11 @@ def send_long_message_as_reply(bot, notify_message, chat_id, parse_mode):
             if len(notify_message) > MAX_MESSAGE_LENGTH:
                 sub_msgs = _split_message(notify_message)
                 message = await bot.send_message(
-                    chat_id=parsed_chat_id, text=sub_msgs[0], parse_mode=parse_mode,
-                    link_preview_options=no_preview, **thread_kwargs,
+                    chat_id=parsed_chat_id,
+                    text=sub_msgs[0],
+                    parse_mode=parse_mode,
+                    link_preview_options=no_preview,
+                    **thread_kwargs,
                 )
                 for send_msg in sub_msgs[1:]:
                     try:
@@ -268,8 +285,11 @@ def send_long_message_as_reply(bot, notify_message, chat_id, parse_mode):
                         await asyncio.sleep(15)
             else:
                 await bot.send_message(
-                    chat_id=parsed_chat_id, text=notify_message, parse_mode=parse_mode,
-                    link_preview_options=no_preview, **thread_kwargs,
+                    chat_id=parsed_chat_id,
+                    text=notify_message,
+                    parse_mode=parse_mode,
+                    link_preview_options=no_preview,
+                    **thread_kwargs,
                 )
 
     asyncio.run(_run())
@@ -289,15 +309,15 @@ def _gchat_fallback(message):
     degrades quietly rather than erroring. Never raises — it is only ever called
     from an except branch.
     """
-    webhook_url = (
-        getattr(settings, "NOTIFICATION_GCHAT_FALLBACK_WEBHOOK", "")
-        or os.environ.get("NOTIFICATION_GCHAT_FALLBACK_WEBHOOK", "")
-    )
+    webhook_url = getattr(
+        settings, "NOTIFICATION_GCHAT_FALLBACK_WEBHOOK", ""
+    ) or os.environ.get("NOTIFICATION_GCHAT_FALLBACK_WEBHOOK", "")
     if not webhook_url:
         return False
     try:
         requests.post(
-            webhook_url, json={"text": message},
+            webhook_url,
+            json={"text": message},
             timeout=_GCHAT_REQUEST_TIMEOUT_SECONDS,
         )
         return True
@@ -364,6 +384,7 @@ def _is_parse_entities_error(exc):
     """
     try:
         from telegram import error as tg_error
+
         bad_request = getattr(tg_error, "BadRequest", None)
         if bad_request is not None and not isinstance(exc, bad_request):
             return False
@@ -373,12 +394,7 @@ def _is_parse_entities_error(exc):
 
 
 def send_telegram_notification(
-    bot,
-    chat_id,
-    message,
-    parse_mode=None,
-    disable_web_page_preview=False,
-    timeout=None
+    bot, chat_id, message, parse_mode=None, disable_web_page_preview=False, timeout=None
 ):
     """Send a notification to Telegram (one retry), falling back to Google Chat.
 
@@ -386,7 +402,12 @@ def send_telegram_notification(
     """
     try:
         _send_once(
-            bot, chat_id, message, parse_mode, disable_web_page_preview, timeout,
+            bot,
+            chat_id,
+            message,
+            parse_mode,
+            disable_web_page_preview,
+            timeout,
         )
         return True
 
@@ -398,7 +419,12 @@ def send_telegram_notification(
         retry_parse_mode = None if _is_parse_entities_error(first_exc) else parse_mode
         try:
             _send_once(
-                bot, chat_id, message, retry_parse_mode, disable_web_page_preview, timeout,
+                bot,
+                chat_id,
+                message,
+                retry_parse_mode,
+                disable_web_page_preview,
+                timeout,
             )
             return True
 
@@ -423,18 +449,19 @@ def send_telegram_notification(
 
 # --- Logging handler: routes errors to the right notification topic ---------
 
+
 class _RequestMetaFormatter(logging.Formatter):
     """Appends request user/IP/referer when a log record carries a request."""
 
-    meta_attrs = ['REMOTE_ADDR', 'HOSTNAME', 'HTTP_REFERER']
+    meta_attrs = ["REMOTE_ADDR", "HOSTNAME", "HTTP_REFERER"]
 
     def format(self, record):
         s = super().format(record)
-        request = getattr(record, 'request', None)
+        request = getattr(record, "request", None)
         if request is not None:
             try:
                 s += f"\nUSER: {getattr(request, 'user', '')}"
-                meta = getattr(request, 'META', {}) or {}
+                meta = getattr(request, "META", {}) or {}
                 for attr in self.meta_attrs:
                     if attr in meta:
                         s += f"\n{attr}: {meta[attr]}"
@@ -465,15 +492,15 @@ class TelegramLogHandler(logging.Handler):
     # Process-wide throttle state (shared by all handler instances so the
     # network send happens outside the lock).
     _throttle_lock = threading.Lock()
-    _last_sent = {}        # signature -> monotonic ts of last send
-    _suppressed = {}       # signature -> count suppressed since last send
+    _last_sent = {}  # signature -> monotonic ts of last send
+    _suppressed = {}  # signature -> count suppressed since last send
 
     def __init__(self, *args, **kwargs):
         super().__init__()
-        self.bot_token = kwargs.get('bot_token') or kwargs.get('bot_id')
-        self.chat_id = kwargs.get('chat_id')
-        self.service = kwargs.get('service', '')
-        self.throttle_seconds = int(kwargs.get('throttle_seconds', 60))
+        self.bot_token = kwargs.get("bot_token") or kwargs.get("bot_id")
+        self.chat_id = kwargs.get("chat_id")
+        self.service = kwargs.get("service", "")
+        self.throttle_seconds = int(kwargs.get("throttle_seconds", 60))
         self.setFormatter(_RequestMetaFormatter())
 
     def _signature(self, record):
@@ -498,8 +525,10 @@ class TelegramLogHandler(logging.Handler):
             prefix = f"[{self.service}] " if self.service else ""
             text = prefix + self.format(record)
             if suppressed:
-                text += (f"\n\n(+{suppressed} similar suppressed in the last "
-                         f"{self.throttle_seconds}s)")
+                text += (
+                    f"\n\n(+{suppressed} similar suppressed in the last "
+                    f"{self.throttle_seconds}s)"
+                )
             send_telegram_notification(
                 bot,
                 self.chat_id,

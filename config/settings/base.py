@@ -1,11 +1,11 @@
 """
 Base settings to build other settings files upon.
 """
+
 from pathlib import Path
-import os
-import environ
 from urllib.parse import parse_qs
 
+import environ
 
 ROOT_DIR = Path(__file__).resolve(strict=True).parent.parent.parent
 # gaius_common/
@@ -27,7 +27,7 @@ DEBUG = env.bool("DJANGO_DEBUG", False)
 # In Windows, this must be set to your system time zone.
 TIME_ZONE = env.str("TIME_ZONE", "Asia/Singapore")
 # https://docs.djangoproject.com/en/dev/ref/settings/#language-code
-LANGUAGE_CODE =  env.str("LANGUAGE_CODE", "en-us")
+LANGUAGE_CODE = env.str("LANGUAGE_CODE", "en-us")
 # https://docs.djangoproject.com/en/dev/ref/settings/#site-id
 SITE_ID = 1
 # https://docs.djangoproject.com/en/dev/ref/settings/#use-i18n
@@ -50,32 +50,32 @@ if env.str("POSTGRESQL_DB_PARAMETERS", None):
 
 DATABASES = {
     "default": {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': env.str("COMMON_DB_NAME", "gaius_common"),
-        'USER': env.str("POSTGRESQL_DB_USER"),
-        'PASSWORD': env.str("POSTGRESQL_DB_PASS"),
-        'HOST':  env.str("POSTGRESQL_DB_HOST"),
-        'PORT': env.str("POSTGRESQL_DB_PORT"),
-        'OPTIONS': config_options
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": env.str("COMMON_DB_NAME", "gaius_common"),
+        "USER": env.str("POSTGRESQL_DB_USER"),
+        "PASSWORD": env.str("POSTGRESQL_DB_PASS"),
+        "HOST": env.str("POSTGRESQL_DB_HOST"),
+        "PORT": env.str("POSTGRESQL_DB_PORT"),
+        "OPTIONS": config_options,
     },
     "kong_database": {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': env.str("KONG_DB_NAME", "gaius_node"),
-        'USER': env.str("KONG_DB_USER"),
-        'PASSWORD': env.str("KONG_DB_PASS"),
-        'HOST':  env.str("KONG_DB_HOST"),
-        'PORT': env.str("KONG_DB_PORT"),
-        'OPTIONS': config_options
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": env.str("KONG_DB_NAME", "gaius_node"),
+        "USER": env.str("KONG_DB_USER"),
+        "PASSWORD": env.str("KONG_DB_PASS"),
+        "HOST": env.str("KONG_DB_HOST"),
+        "PORT": env.str("KONG_DB_PORT"),
+        "OPTIONS": config_options,
     },
 }
 
 DATABASES["default"]["ATOMIC_REQUESTS"] = True
 DATABASE_ROUTERS = ["gaius_common.dbrouter.KongDBRouter"]
-DATABASE_APPS_MAPPING = {'gaius_kong': "kong_database"}
+DATABASE_APPS_MAPPING = {"gaius_kong": "kong_database"}
 
-#DATABASE_ROUTERS = ["gaius_common.dbrouter.AuthRouter", ]
+# DATABASE_ROUTERS = ["gaius_common.dbrouter.AuthRouter", ]
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # URLS
 # ------------------------------------------------------------------------------
@@ -95,7 +95,6 @@ DJANGO_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     # "django.contrib.humanize", # Handy template tags
-
     "django.forms",
 ]
 
@@ -104,16 +103,16 @@ THIRD_PARTY_APPS = [
     "django_celery_beat",
     "rest_framework",
     "rest_framework.authtoken",
-    'rest_auth',
+    "rest_auth",
     "corsheaders",
     "django_celery_results",
 ]
 
 LOCAL_APPS = [
-    #"gaius_common.users.apps.UsersConfig",
+    # "gaius_common.users.apps.UsersConfig",
     # Your stuff: custom apps go here
-    'gaius_common.kong',
-    'gaius_common.common'
+    "gaius_common.kong",
+    "gaius_common.common",
 ]
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -123,7 +122,7 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 # https://docs.djangoproject.com/en/dev/ref/settings/#migration-modules
 MIGRATION_MODULES = {
     "sites": "gaius_common.contrib.sites.migrations",
-    "common": "gaius_common.contrib.common.migrations"
+    "common": "gaius_common.contrib.common.migrations",
 }
 
 # AUTHENTICATION
@@ -175,7 +174,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.common.BrokenLinkEmailsMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "gaius_common.middleware.changeLog.ChangeLogMiddleware"
+    "gaius_common.middleware.changeLog.ChangeLogMiddleware",
 ]
 
 # STATIC
@@ -303,16 +302,18 @@ if USE_TZ:
     # http://docs.celeryproject.org/en/latest/userguide/configuration.html#std:setting-timezone
     CELERY_TIMEZONE = TIME_ZONE
 # http://docs.celeryproject.org/en/latest/userguide/configuration.html#std:setting-broker_url
-#CELERY_BROKER_URL = env("CELERY_BROKER_URL")
+# CELERY_BROKER_URL = env("CELERY_BROKER_URL")
 
-REDIS_HOST = env.str('REDIS_HOST', 'redis-master')
-REDIS_PASSWORD = env.str('REDIS_PASSWORD', 'hZg7kXzvPN')
-REDIS_PORT = env.int('REDIS_PORT', 6379)
-REDIS_DATABASE = env.int('REDIS_DATABASE', 1)
-REDIS_DATABASE_CELERY = env.int('REDIS_DATABASE_CELERY', 0)
-REDIS_DATABASE_IP_BLOCK = env.int('REDIS_DATABASE_IP_BLOCK', 15)
+REDIS_HOST = env.str("REDIS_HOST", "redis-master")
+REDIS_PASSWORD = env.str("REDIS_PASSWORD", "hZg7kXzvPN")
+REDIS_PORT = env.int("REDIS_PORT", 6379)
+REDIS_DATABASE = env.int("REDIS_DATABASE", 1)
+REDIS_DATABASE_CELERY = env.int("REDIS_DATABASE_CELERY", 0)
+REDIS_DATABASE_IP_BLOCK = env.int("REDIS_DATABASE_IP_BLOCK", 15)
 
-CELERY_BROKER_URL = f'redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DATABASE_CELERY}'
+CELERY_BROKER_URL = (
+    f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DATABASE_CELERY}"
+)
 
 
 # http://docs.celeryproject.org/en/latest/userguide/configuration.html#std:setting-result_backend
@@ -352,35 +353,36 @@ USE_KEYCLOAK = env.bool("USE_KEYCLOAK", False)
 
 if USE_KEYCLOAK is not None:
     INSTALLED_APPS += [
-        'django_keycloak.apps.KeycloakAppConfig',
+        "django_keycloak.apps.KeycloakAppConfig",
     ]
 
     MIDDLEWARE += [
-        'django_keycloak.middleware.BaseKeycloakMiddleware',
-        'django_keycloak.middleware.KeycloakStatelessBearerAuthenticationMiddleware',
+        "django_keycloak.middleware.BaseKeycloakMiddleware",
+        "django_keycloak.middleware.KeycloakStatelessBearerAuthenticationMiddleware",
     ]
     PASSWORD_HASHERS += [
-        'django_keycloak.hashers.PBKDF2SHA512PasswordHasher',
+        "django_keycloak.hashers.PBKDF2SHA512PasswordHasher",
     ]
     AUTHENTICATION_BACKENDS = [
-        'django.contrib.auth.backends.ModelBackend',
-        'django_keycloak.auth.backends.KeycloakAuthorizationCodeBackend',
-        'django_keycloak.auth.backends.KeycloakIDTokenAuthorizationBackend',
+        "django.contrib.auth.backends.ModelBackend",
+        "django_keycloak.auth.backends.KeycloakAuthorizationCodeBackend",
+        "django_keycloak.auth.backends.KeycloakIDTokenAuthorizationBackend",
     ]
 
-    REST_FRAMEWORK['DEFAULT_AUTHENTICATION_CLASSES'] += ['django_keycloak.auth.authentication.KeycloakIDAuthentication', ]
+    REST_FRAMEWORK["DEFAULT_AUTHENTICATION_CLASSES"] += [
+        "django_keycloak.auth.authentication.KeycloakIDAuthentication",
+    ]
 
-
-    KEYCLOAK_OIDC_PROFILE_MODEL = 'django_keycloak.OpenIdConnectProfile'
+    KEYCLOAK_OIDC_PROFILE_MODEL = "django_keycloak.OpenIdConnectProfile"
     KEYCLOAK_BEARER_AUTHENTICATION_EXEMPT_PATHS = [
-        r'^admin/',
-        r'^docs/',
+        r"^admin/",
+        r"^docs/",
     ]
-#     KEYCLOAK_SKIP_SSL_VERIFY = True
+    #     KEYCLOAK_SKIP_SSL_VERIFY = True
 
-    LOGIN_URL = 'keycloak_login'
+    LOGIN_URL = "keycloak_login"
 
 # Your stuff...
 # ------------------------------------------------------------------------------
 
-LOGS_INDEX_V3=env.str('LOGS_INDEX_V3','change-logs')
+LOGS_INDEX_V3 = env.str("LOGS_INDEX_V3", "change-logs")

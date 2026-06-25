@@ -1,5 +1,5 @@
-from elasticsearch_dsl import Document, Keyword, Text, Date, Ip
 from django.conf import settings
+from elasticsearch_dsl import Date, Document, Ip, Keyword, Text
 
 
 class ChangeLogDocument(Document):

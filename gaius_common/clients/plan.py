@@ -11,6 +11,7 @@ settings:
 Each function mirrors the response shape of the Celery task it replaces, so
 callers can swap `send_task(...).get()` for these one-for-one.
 """
+
 import logging
 from urllib.parse import urljoin
 
@@ -90,7 +91,9 @@ def get_quota_by_cname(cname):
 
 def subscriptions_by_host(host=None):
     """Replaces `plan.subscriptions_by_host`. Returns a list of subscription dicts."""
-    return _get("plan/internal/subscriptions-by-host/", {"host": host} if host else None)
+    return _get(
+        "plan/internal/subscriptions-by-host/", {"host": host} if host else None
+    )
 
 
 def find_all_cnames():

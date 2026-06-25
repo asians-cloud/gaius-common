@@ -1,32 +1,38 @@
-import uuid, logging
+import logging
+import uuid
 from contextvars import ContextVar
 
 logger = logging.getLogger("changelog")
 
-_request_ctx = ContextVar('current_request', default={})
+_request_ctx = ContextVar("current_request", default={})
+
 
 def set_current_request(new_context):
     _request_ctx.set(new_context)
 
+
 def get_current_request():
     return _request_ctx.get()
+
 
 def add_to_request_context(key, value):
     context = _request_ctx.get()
     context[key] = value
     _request_ctx.set(context)
 
+
 def get_ip_address(request):
-    x_real_ip = request.META.get('HTTP_X_REAL_IP')
-    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    x_real_ip = request.META.get("HTTP_X_REAL_IP")
+    x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
 
     if x_forwarded_for:
-        ip = x_forwarded_for.split(',')[0]
+        ip = x_forwarded_for.split(",")[0]
     elif x_real_ip:
         ip = x_real_ip
     else:
-        ip = request.META.get('REMOTE_ADDR')
+        ip = request.META.get("REMOTE_ADDR")
     return ip
+
 
 class ChangeLogMiddleware:
     def __init__(self, get_response):
@@ -35,9 +41,9 @@ class ChangeLogMiddleware:
     def __call__(self, request):
         # Create a new dictionary for storing metadata
         request_metadata = {
-            'request_id': str(uuid.uuid4()),
-            'ip_address': get_ip_address(request),
-            'request': request  # Add the request object to the metadata
+            "request_id": str(uuid.uuid4()),
+            "ip_address": get_ip_address(request),
+            "request": request,  # Add the request object to the metadata
         }
 
         # Set the metadata context

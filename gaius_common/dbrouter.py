@@ -3,15 +3,26 @@ class AuthRouter:
     A router to control all database operations on models in the
     auth and contenttypes applications.
     """
-    route_app_labels = {'auth', 'admin', 'sites', 'authtoken', 'sessions', 'contenttypes',  'django_keycloak', 'django_celery_results', 'django_celery_beat',
-                        'common'}
+
+    route_app_labels = {
+        "auth",
+        "admin",
+        "sites",
+        "authtoken",
+        "sessions",
+        "contenttypes",
+        "django_keycloak",
+        "django_celery_results",
+        "django_celery_beat",
+        "common",
+    }
 
     def db_for_read(self, model, **hints):
         """
         Attempts to read common and contenttypes models go to auth_db.
         """
         if model._meta.app_label in self.route_app_labels:
-            return 'common'
+            return "common"
         return None
 
     def db_for_write(self, model, **hints):
@@ -19,7 +30,7 @@ class AuthRouter:
         Attempts to write common and contenttypes models go to auth_db.
         """
         if model._meta.app_label in self.route_app_labels:
-            return 'common'
+            return "common"
         return None
 
     def allow_relation(self, obj1, obj2, **hints):
@@ -28,8 +39,8 @@ class AuthRouter:
         involved.
         """
         if (
-            obj1._meta.app_label in self.route_app_labels or
-            obj2._meta.app_label in self.route_app_labels
+            obj1._meta.app_label in self.route_app_labels
+            or obj2._meta.app_label in self.route_app_labels
         ):
             return True
         return None
@@ -40,7 +51,7 @@ class AuthRouter:
         'common_db' database.
         """
         if app_label in self.route_app_labels:
-            return db == 'common'
+            return db == "common"
         return None
 
 
@@ -86,5 +97,3 @@ class KongDBRouter(object):
         if app_label in self.route_app_labels:
             return db == "kong_database"
         return None
-
-    

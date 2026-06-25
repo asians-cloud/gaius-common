@@ -9,7 +9,8 @@ Slack is fully retired. Import from ``gaius_common.utils.telegram`` instead:
 This re-export keeps any straggling ``gaius_common.utils.slack`` import sites
 working during the migration and can be removed once none remain.
 """
+
 from gaius_common.utils.telegram import (  # noqa: F401
-    send_telegram_notification,
     send_long_message_as_reply,
+    send_telegram_notification,
 )

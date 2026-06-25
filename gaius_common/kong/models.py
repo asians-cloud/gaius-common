@@ -1,35 +1,39 @@
 import uuid
-from django.db import models
+
 from django.contrib.postgres.fields import ArrayField
+from django.db import models
 
 KONG_ROUTE = 1
 KONG_SERVICE = 2
 KONG_UPSTREAM = 3
 KONG_CHOICES = (
-    (KONG_ROUTE, 'Kong Route'),
-    (KONG_SERVICE, 'Kong Service'),
-    (KONG_UPSTREAM, 'Kong Upstream')
+    (KONG_ROUTE, "Kong Route"),
+    (KONG_SERVICE, "Kong Service"),
+    (KONG_UPSTREAM, "Kong Upstream"),
 )
+
 
 class Acls(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     created_at = models.DateTimeField(blank=True, null=True, auto_now_add=True)
-    consumer = models.ForeignKey('Consumers', models.DO_NOTHING, blank=True, null=True)
+    consumer = models.ForeignKey("Consumers", models.DO_NOTHING, blank=True, null=True)
     group = models.TextField(blank=True, null=True)
     cache_key = models.TextField(unique=True, blank=True, null=True)
-    tags = ArrayField(models.TextField(), blank=True, null=True)  # This field type is a guess.
-    ws = models.ForeignKey('Workspaces', models.DO_NOTHING, blank=True, null=True)
+    tags = ArrayField(
+        models.TextField(), blank=True, null=True
+    )  # This field type is a guess.
+    ws = models.ForeignKey("Workspaces", models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
         managed = False
         app_label = "kong"
-        db_table = 'acls'
-        unique_together = (('id', 'ws'),)
+        db_table = "acls"
+        unique_together = (("id", "ws"),)
 
     def save(self, *args, **kwargs):
 
         if self.ws_id is None:
-            self.ws = Workspaces.objects.get(name='default')
+            self.ws = Workspaces.objects.get(name="default")
 
         super(Acls, self).save(*args, **kwargs)
 
@@ -44,28 +48,33 @@ class AcmeStorage(models.Model):
     class Meta:
         managed = False
         app_label = "kong"
-        db_table = 'acme_storage'
+        db_table = "acme_storage"
 
 
 class BasicauthCredentials(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     created_at = models.DateTimeField(blank=True, null=True, auto_now_add=True)
-    consumer = models.ForeignKey('Consumers', models.DO_NOTHING, blank=True, null=True)
+    consumer = models.ForeignKey("Consumers", models.DO_NOTHING, blank=True, null=True)
     username = models.TextField(blank=True, null=True)
     password = models.TextField(blank=True, null=True)
-    tags = ArrayField(models.TextField(), blank=True, null=True)  # This field type is a guess.
-    ws = models.ForeignKey('Workspaces', models.DO_NOTHING, blank=True, null=True)
+    tags = ArrayField(
+        models.TextField(), blank=True, null=True
+    )  # This field type is a guess.
+    ws = models.ForeignKey("Workspaces", models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
         managed = False
         app_label = "kong"
-        db_table = 'basicauth_credentials'
-        unique_together = (('id', 'ws'), ('ws', 'username'),)
+        db_table = "basicauth_credentials"
+        unique_together = (
+            ("id", "ws"),
+            ("ws", "username"),
+        )
 
     def save(self, *args, **kwargs):
 
         if self.ws_id is None:
-            self.ws = Workspaces.objects.get(name='default')
+            self.ws = Workspaces.objects.get(name="default")
 
         super(BasicauthCredentials, self).save(*args, **kwargs)
 
@@ -74,13 +83,15 @@ class CaCertificates(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     created_at = models.DateTimeField(blank=True, null=True, auto_now_add=True)
     cert = models.TextField()
-    tags = ArrayField(models.TextField(), blank=True, null=True)  # This field type is a guess.
+    tags = ArrayField(
+        models.TextField(), blank=True, null=True
+    )  # This field type is a guess.
     cert_digest = models.TextField(unique=True)
 
     class Meta:
         managed = False
         app_label = "kong"
-        db_table = 'ca_certificates'
+        db_table = "ca_certificates"
 
 
 class Certificates(models.Model):
@@ -88,21 +99,29 @@ class Certificates(models.Model):
     created_at = models.DateTimeField(blank=True, null=True, auto_now_add=True)
     cert = models.TextField(blank=True, null=True)
     key = models.TextField(blank=True, null=True)
-    tags = ArrayField(models.TextField(), blank=True, null=True)  # This field type is a guess.
-    ws = models.ForeignKey('Workspaces', models.DO_NOTHING, blank=True, null=True, related_name='certificates')
+    tags = ArrayField(
+        models.TextField(), blank=True, null=True
+    )  # This field type is a guess.
+    ws = models.ForeignKey(
+        "Workspaces",
+        models.DO_NOTHING,
+        blank=True,
+        null=True,
+        related_name="certificates",
+    )
     cert_alt = models.TextField(blank=True, null=True)
     key_alt = models.TextField(blank=True, null=True)
 
     class Meta:
         managed = False
         app_label = "kong"
-        db_table = 'certificates'
-        unique_together = (('id', 'ws'),)
+        db_table = "certificates"
+        unique_together = (("id", "ws"),)
 
     def save(self, *args, **kwargs):
 
         if self.ws_id is None:
-            self.ws = Workspaces.objects.get(name='default')
+            self.ws = Workspaces.objects.get(name="default")
 
         super(Certificates, self).save(*args, **kwargs)
 
@@ -125,12 +144,12 @@ class Certificates(models.Model):
     @property
     def cname(self):
         tags = self.tags_to_dict()
-        return tags.get("cname", '')
+        return tags.get("cname", "")
 
     @property
     def owner(self):
         tags = self.tags_to_dict()
-        return tags.get('owner', '')
+        return tags.get("owner", "")
 
 
 class ClusterEvents(models.Model):
@@ -145,7 +164,7 @@ class ClusterEvents(models.Model):
     class Meta:
         managed = False
         app_label = "kong"
-        db_table = 'cluster_events'
+        db_table = "cluster_events"
 
 
 class ClusteringDataPlanes(models.Model):
@@ -161,7 +180,7 @@ class ClusteringDataPlanes(models.Model):
     class Meta:
         managed = False
         app_label = "kong"
-        db_table = 'clustering_data_planes'
+        db_table = "clustering_data_planes"
 
 
 class Consumers(models.Model):
@@ -169,19 +188,27 @@ class Consumers(models.Model):
     created_at = models.DateTimeField(blank=True, null=True, auto_now_add=True)
     username = models.TextField(blank=True, null=True)
     custom_id = models.TextField(blank=True, null=True)
-    tags = ArrayField(models.TextField(), blank=True, null=True)  # This field type is a guess.
-    ws = models.ForeignKey('Workspaces', models.DO_NOTHING, blank=True, null=True, related_name='consumers')
+    tags = ArrayField(
+        models.TextField(), blank=True, null=True
+    )  # This field type is a guess.
+    ws = models.ForeignKey(
+        "Workspaces", models.DO_NOTHING, blank=True, null=True, related_name="consumers"
+    )
 
     class Meta:
         managed = False
         app_label = "kong"
-        db_table = 'consumers'
-        unique_together = (('id', 'ws'), ('ws', 'username'), ('ws', 'custom_id'),)
+        db_table = "consumers"
+        unique_together = (
+            ("id", "ws"),
+            ("ws", "username"),
+            ("ws", "custom_id"),
+        )
 
     def save(self, *args, **kwargs):
 
         if self.ws_id is None:
-            self.ws = Workspaces.objects.get(name='default')
+            self.ws = Workspaces.objects.get(name="default")
 
         super(Consumers, self).save(*args, **kwargs)
 
@@ -192,19 +219,24 @@ class HmacauthCredentials(models.Model):
     consumer = models.ForeignKey(Consumers, models.DO_NOTHING, blank=True, null=True)
     username = models.TextField(blank=True, null=True)
     secret = models.TextField(blank=True, null=True)
-    tags = ArrayField(models.TextField(), blank=True, null=True)  # This field type is a guess.
-    ws = models.ForeignKey('Workspaces', models.DO_NOTHING, blank=True, null=True)
+    tags = ArrayField(
+        models.TextField(), blank=True, null=True
+    )  # This field type is a guess.
+    ws = models.ForeignKey("Workspaces", models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
         managed = False
         app_label = "kong"
-        db_table = 'hmacauth_credentials'
-        unique_together = (('id', 'ws'), ('ws', 'username'),)
+        db_table = "hmacauth_credentials"
+        unique_together = (
+            ("id", "ws"),
+            ("ws", "username"),
+        )
 
     def save(self, *args, **kwargs):
 
         if self.ws_id is None:
-            self.ws = Workspaces.objects.get(name='default')
+            self.ws = Workspaces.objects.get(name="default")
 
         super(HmacauthCredentials, self).save(*args, **kwargs)
 
@@ -217,19 +249,24 @@ class JwtSecrets(models.Model):
     secret = models.TextField(blank=True, null=True)
     algorithm = models.TextField(blank=True, null=True)
     rsa_public_key = models.TextField(blank=True, null=True)
-    tags = ArrayField(models.TextField(), blank=True, null=True)  # This field type is a guess.
-    ws = models.ForeignKey('Workspaces', models.DO_NOTHING, blank=True, null=True)
+    tags = ArrayField(
+        models.TextField(), blank=True, null=True
+    )  # This field type is a guess.
+    ws = models.ForeignKey("Workspaces", models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
         managed = False
         app_label = "kong"
-        db_table = 'jwt_secrets'
-        unique_together = (('id', 'ws'), ('ws', 'key'),)
+        db_table = "jwt_secrets"
+        unique_together = (
+            ("id", "ws"),
+            ("ws", "key"),
+        )
 
     def save(self, *args, **kwargs):
 
         if self.ws_id is None:
-            self.ws = Workspaces.objects.get(name='default')
+            self.ws = Workspaces.objects.get(name="default")
 
         super(JwtSecrets, self).save(*args, **kwargs)
 
@@ -239,20 +276,25 @@ class KeyauthCredentials(models.Model):
     created_at = models.DateTimeField(blank=True, null=True, auto_now_add=True)
     consumer = models.ForeignKey(Consumers, models.DO_NOTHING, blank=True, null=True)
     key = models.TextField(blank=True, null=True)
-    tags = ArrayField(models.TextField(), blank=True, null=True)  # This field type is a guess.
+    tags = ArrayField(
+        models.TextField(), blank=True, null=True
+    )  # This field type is a guess.
     ttl = models.DateTimeField(blank=True, null=True)
-    ws = models.ForeignKey('Workspaces', models.DO_NOTHING, blank=True, null=True)
+    ws = models.ForeignKey("Workspaces", models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
         managed = False
         app_label = "kong"
-        db_table = 'keyauth_credentials'
-        unique_together = (('id', 'ws'), ('ws', 'key'),)
+        db_table = "keyauth_credentials"
+        unique_together = (
+            ("id", "ws"),
+            ("ws", "key"),
+        )
 
     def save(self, *args, **kwargs):
 
         if self.ws_id is None:
-            self.ws = Workspaces.objects.get(name='default')
+            self.ws = Workspaces.objects.get(name="default")
 
         super(KeyauthCredentials, self).save(*args, **kwargs)
 
@@ -265,32 +307,37 @@ class Locks(models.Model):
     class Meta:
         managed = False
         app_label = "kong"
-        db_table = 'locks'
+        db_table = "locks"
 
 
 class Oauth2AuthorizationCodes(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     created_at = models.DateTimeField(blank=True, null=True, auto_now_add=True)
-    credential = models.ForeignKey('Oauth2Credentials', models.DO_NOTHING, blank=True, null=True)
-    service = models.ForeignKey('Services', models.DO_NOTHING, blank=True, null=True)
+    credential = models.ForeignKey(
+        "Oauth2Credentials", models.DO_NOTHING, blank=True, null=True
+    )
+    service = models.ForeignKey("Services", models.DO_NOTHING, blank=True, null=True)
     code = models.TextField(blank=True, null=True)
     authenticated_userid = models.TextField(blank=True, null=True)
     scope = models.TextField(blank=True, null=True)
     ttl = models.DateTimeField(blank=True, null=True)
     challenge = models.TextField(blank=True, null=True)
     challenge_method = models.TextField(blank=True, null=True)
-    ws = models.ForeignKey('Workspaces', models.DO_NOTHING, blank=True, null=True)
+    ws = models.ForeignKey("Workspaces", models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
         managed = False
         app_label = "kong"
-        db_table = 'oauth2_authorization_codes'
-        unique_together = (('id', 'ws'), ('ws', 'code'),)
+        db_table = "oauth2_authorization_codes"
+        unique_together = (
+            ("id", "ws"),
+            ("ws", "code"),
+        )
 
     def save(self, *args, **kwargs):
 
         if self.ws_id is None:
-            self.ws = Workspaces.objects.get(name='default')
+            self.ws = Workspaces.objects.get(name="default")
 
         super(Oauth2AuthorizationCodes, self).save(*args, **kwargs)
 
@@ -302,22 +349,29 @@ class Oauth2Credentials(models.Model):
     consumer = models.ForeignKey(Consumers, models.DO_NOTHING, blank=True, null=True)
     client_id = models.TextField(blank=True, null=True)
     client_secret = models.TextField(blank=True, null=True)
-    redirect_uris = models.TextField(blank=True, null=True)  # This field type is a guess.
-    tags = ArrayField(models.TextField(), blank=True, null=True)  # This field type is a guess.
+    redirect_uris = models.TextField(
+        blank=True, null=True
+    )  # This field type is a guess.
+    tags = ArrayField(
+        models.TextField(), blank=True, null=True
+    )  # This field type is a guess.
     client_type = models.TextField(blank=True, null=True)
     hash_secret = models.BooleanField(blank=True, null=True)
-    ws = models.ForeignKey('Workspaces', models.DO_NOTHING, blank=True, null=True)
+    ws = models.ForeignKey("Workspaces", models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
         managed = False
         app_label = "kong"
-        db_table = 'oauth2_credentials'
-        unique_together = (('id', 'ws'), ('ws', 'client_id'),)
+        db_table = "oauth2_credentials"
+        unique_together = (
+            ("id", "ws"),
+            ("ws", "client_id"),
+        )
 
     def save(self, *args, **kwargs):
 
         if self.ws_id is None:
-            self.ws = Workspaces.objects.get(name='default')
+            self.ws = Workspaces.objects.get(name="default")
 
         super(Oauth2Credentials, self).save(*args, **kwargs)
 
@@ -325,8 +379,10 @@ class Oauth2Credentials(models.Model):
 class Oauth2Tokens(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     created_at = models.DateTimeField(blank=True, null=True, auto_now_add=True)
-    credential = models.ForeignKey(Oauth2Credentials, models.DO_NOTHING, blank=True, null=True)
-    service = models.ForeignKey('Services', models.DO_NOTHING, blank=True, null=True)
+    credential = models.ForeignKey(
+        Oauth2Credentials, models.DO_NOTHING, blank=True, null=True
+    )
+    service = models.ForeignKey("Services", models.DO_NOTHING, blank=True, null=True)
     access_token = models.TextField(blank=True, null=True)
     refresh_token = models.TextField(blank=True, null=True)
     token_type = models.TextField(blank=True, null=True)
@@ -334,18 +390,22 @@ class Oauth2Tokens(models.Model):
     authenticated_userid = models.TextField(blank=True, null=True)
     scope = models.TextField(blank=True, null=True)
     ttl = models.DateTimeField(blank=True, null=True)
-    ws = models.ForeignKey('Workspaces', models.DO_NOTHING, blank=True, null=True)
+    ws = models.ForeignKey("Workspaces", models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
         managed = False
         app_label = "kong"
-        db_table = 'oauth2_tokens'
-        unique_together = (('id', 'ws'), ('ws', 'access_token'), ('ws', 'refresh_token'),)
+        db_table = "oauth2_tokens"
+        unique_together = (
+            ("id", "ws"),
+            ("ws", "access_token"),
+            ("ws", "refresh_token"),
+        )
 
     def save(self, *args, **kwargs):
 
         if self.ws_id is None:
-            self.ws = Workspaces.objects.get(name='default')
+            self.ws = Workspaces.objects.get(name="default")
 
         super(Oauth2Tokens, self).save(*args, **kwargs)
 
@@ -358,7 +418,7 @@ class Parameters(models.Model):
     class Meta:
         managed = False
         app_label = "kong"
-        db_table = 'parameters'
+        db_table = "parameters"
 
 
 class Plugins(models.Model):
@@ -366,20 +426,35 @@ class Plugins(models.Model):
     created_at = models.DateTimeField(blank=True, null=True, auto_now_add=True)
     name = models.TextField()
     consumer = models.ForeignKey(Consumers, models.DO_NOTHING, blank=True, null=True)
-    service = models.ForeignKey('Services', models.DO_NOTHING, blank=True, null=True, related_name='service_plugins')
-    route = models.ForeignKey('Routes', models.DO_NOTHING, blank=True, null=True)
+    service = models.ForeignKey(
+        "Services",
+        models.DO_NOTHING,
+        blank=True,
+        null=True,
+        related_name="service_plugins",
+    )
+    route = models.ForeignKey("Routes", models.DO_NOTHING, blank=True, null=True)
     config = models.JSONField()
     enabled = models.BooleanField(default=True)
     cache_key = models.TextField(unique=True, blank=True, null=True)
-    protocols = ArrayField(models.TextField(), blank=True, null=True, default=["grpc", "grpcs", "http", "https"]) # This field type is a guess.
-    tags = ArrayField(models.TextField(), blank=True, null=True)  # This field type is a guess.
-    ws = models.ForeignKey('Workspaces', models.DO_NOTHING, blank=True, null=True, related_name='plugins')
+    protocols = ArrayField(
+        models.TextField(),
+        blank=True,
+        null=True,
+        default=["grpc", "grpcs", "http", "https"],
+    )  # This field type is a guess.
+    tags = ArrayField(
+        models.TextField(), blank=True, null=True
+    )  # This field type is a guess.
+    ws = models.ForeignKey(
+        "Workspaces", models.DO_NOTHING, blank=True, null=True, related_name="plugins"
+    )
 
     class Meta:
         managed = False
         app_label = "kong"
-        db_table = 'plugins'
-        unique_together = (('id', 'ws'),)
+        db_table = "plugins"
+        unique_together = (("id", "ws"),)
 
     def __str__(self):
         if self.name:
@@ -399,8 +474,10 @@ class RatelimitingMetrics(models.Model):
     class Meta:
         managed = False
         app_label = "kong"
-        db_table = 'ratelimiting_metrics'
-        unique_together = (('identifier', 'period', 'period_date', 'service_id', 'route_id'),)
+        db_table = "ratelimiting_metrics"
+        unique_together = (
+            ("identifier", "period", "period_date", "service_id", "route_id"),
+        )
 
 
 class ResponseRatelimitingMetrics(models.Model):
@@ -414,8 +491,10 @@ class ResponseRatelimitingMetrics(models.Model):
     class Meta:
         managed = False
         app_label = "kong"
-        db_table = 'response_ratelimiting_metrics'
-        unique_together = (('identifier', 'period', 'period_date', 'service_id', 'route_id'),)
+        db_table = "response_ratelimiting_metrics"
+        unique_together = (
+            ("identifier", "period", "period_date", "service_id", "route_id"),
+        )
 
 
 class Routes(models.Model):
@@ -423,31 +502,58 @@ class Routes(models.Model):
     created_at = models.DateTimeField(blank=True, null=True, auto_now_add=True)
     updated_at = models.DateTimeField(blank=True, null=True, auto_now=True)
     name = models.TextField(blank=True, null=True)
-    service = models.ForeignKey('Services', models.DO_NOTHING, blank=True, null=True)
-    protocols = ArrayField(models.TextField(), blank=True, null=True)  # This field type is a guess.
-    methods = ArrayField(models.TextField(), blank=True, null=True)  # This field type is a guess.
-    hosts = ArrayField(models.TextField(), blank=True, null=True)  # This field type is a guess.
-    paths = ArrayField(models.TextField(), blank=True, null=True)  # This field type is a guess.
-    snis = ArrayField(models.TextField(), blank=True, null=True)  # This field type is a guess.
-    sources = ArrayField(models.JSONField(), blank=True, null=True)  # This field type is a guess.
-    destinations = ArrayField(models.JSONField(), blank=True, null=True)  # This field type is a guess.
+    service = models.ForeignKey("Services", models.DO_NOTHING, blank=True, null=True)
+    protocols = ArrayField(
+        models.TextField(), blank=True, null=True
+    )  # This field type is a guess.
+    methods = ArrayField(
+        models.TextField(), blank=True, null=True
+    )  # This field type is a guess.
+    hosts = ArrayField(
+        models.TextField(), blank=True, null=True
+    )  # This field type is a guess.
+    paths = ArrayField(
+        models.TextField(), blank=True, null=True
+    )  # This field type is a guess.
+    snis = ArrayField(
+        models.TextField(), blank=True, null=True
+    )  # This field type is a guess.
+    sources = ArrayField(
+        models.JSONField(), blank=True, null=True
+    )  # This field type is a guess.
+    destinations = ArrayField(
+        models.JSONField(), blank=True, null=True
+    )  # This field type is a guess.
     regex_priority = models.BigIntegerField(blank=True, null=True, default=0)
     strip_path = models.BooleanField(blank=True, null=True, default=True)
     preserve_host = models.BooleanField(blank=True, null=True, default=True)
-    tags = ArrayField(models.TextField(), blank=True, null=True)  # This field type is a guess.
+    tags = ArrayField(
+        models.TextField(), blank=True, null=True
+    )  # This field type is a guess.
     https_redirect_status_code = models.IntegerField(blank=True, null=True)
     headers = models.JSONField(blank=True, null=True)
-    path_handling = models.TextField(blank=True, null=True, default='v0')
-    ws = models.ForeignKey('Workspaces', models.DO_NOTHING, blank=True, null=True, related_name='routes')
+    path_handling = models.TextField(blank=True, null=True, default="v0")
+    ws = models.ForeignKey(
+        "Workspaces", models.DO_NOTHING, blank=True, null=True, related_name="routes"
+    )
     request_buffering = models.BooleanField(blank=True, null=True, default=True)
     response_buffering = models.BooleanField(blank=True, null=True, default=True)
-    metadata = models.ForeignKey('KongEntityMetadata', models.DO_NOTHING, blank=True, null=True, related_name='metadata_routes')
+    metadata = models.ForeignKey(
+        "KongEntityMetadata",
+        models.DO_NOTHING,
+        blank=True,
+        null=True,
+        related_name="metadata_routes",
+    )
 
     class Meta:
         managed = False
         app_label = "kong"
-        db_table = 'routes'
-        unique_together = (('id', 'ws'), ('ws', 'name'),)
+        db_table = "routes"
+        unique_together = (
+            ("id", "ws"),
+            ("ws", "name"),
+        )
 
     def __str__(self):
         if self.name:
@@ -471,19 +577,19 @@ class Routes(models.Model):
     @property
     def cname(self):
         tags = self.tags_to_dict()
-        return tags.get("cname", '')
+        return tags.get("cname", "")
 
     @property
     def domain_cname(self):
         tags = self.tags_to_dict()
-        if '*' in self.name:
-            self.name = self.name.replace('*', 'all')
+        if "*" in self.name:
+            self.name = self.name.replace("*", "all")
         return f"{self.name}.{tags.get('cname', '')}"
 
     def save(self, *args, **kwargs):
 
         if self.ws_id is None:
-            self.ws = Workspaces.objects.get(name='default')
+            self.ws = Workspaces.objects.get(name="default")
 
         super(Routes, self).save(*args, **kwargs)
 
@@ -492,14 +598,18 @@ class SchemaMeta(models.Model):
     key = models.TextField(primary_key=True)
     subsystem = models.TextField()
     last_executed = models.TextField(blank=True, null=True)
-    executed = ArrayField(models.TextField(), blank=True, null=True)  # This field type is a guess.
-    pending = ArrayField(models.TextField(), blank=True, null=True)  # This field type is a guess.
+    executed = ArrayField(
+        models.TextField(), blank=True, null=True
+    )  # This field type is a guess.
+    pending = ArrayField(
+        models.TextField(), blank=True, null=True
+    )  # This field type is a guess.
 
     class Meta:
         managed = False
         app_label = "kong"
-        db_table = 'schema_meta'
-        unique_together = (('key', 'subsystem'),)
+        db_table = "schema_meta"
+        unique_together = (("key", "subsystem"),)
 
 
 class Services(models.Model):
@@ -515,20 +625,37 @@ class Services(models.Model):
     connect_timeout = models.BigIntegerField(blank=True, null=True, default=9000)
     write_timeout = models.BigIntegerField(blank=True, null=True, default=60000)
     read_timeout = models.BigIntegerField(blank=True, null=True, default=60000)
-    tags = ArrayField(models.TextField(), blank=True, null=True)  # This field type is a guess.
-    client_certificate = models.ForeignKey(Certificates, models.DO_NOTHING, blank=True, null=True)
+    tags = ArrayField(
+        models.TextField(), blank=True, null=True
+    )  # This field type is a guess.
+    client_certificate = models.ForeignKey(
+        Certificates, models.DO_NOTHING, blank=True, null=True
+    )
     tls_verify = models.BooleanField(blank=True, null=True)
     tls_verify_depth = models.SmallIntegerField(blank=True, null=True)
-    ca_certificates = ArrayField(models.UUIDField(), blank=True, null=True)  # This field type is a guess.
-    ws = models.ForeignKey('Workspaces', models.DO_NOTHING, blank=True, null=True, related_name='services')
+    ca_certificates = ArrayField(
+        models.UUIDField(), blank=True, null=True
+    )  # This field type is a guess.
+    ws = models.ForeignKey(
+        "Workspaces", models.DO_NOTHING, blank=True, null=True, related_name="services"
+    )
     enabled = models.BooleanField(blank=True, null=True, default=True)
-    metadata = models.ForeignKey('KongEntityMetadata', models.DO_NOTHING, blank=True, null=True, related_name='metadata_services')
+    metadata = models.ForeignKey(
+        "KongEntityMetadata",
+        models.DO_NOTHING,
+        blank=True,
+        null=True,
+        related_name="metadata_services",
+    )
 
     class Meta:
         managed = False
         app_label = "kong"
-        db_table = 'services'
-        unique_together = (('id', 'ws'), ('ws', 'name'),)
+        db_table = "services"
+        unique_together = (
+            ("id", "ws"),
+            ("ws", "name"),
+        )
 
     def __str__(self):
         if self.name:
@@ -540,7 +667,7 @@ class Services(models.Model):
         if self.tags:
             for tag in self.tags:
                 # Skip tags that don't have an = sign
-                if '=' not in tag:
+                if "=" not in tag:
                     continue
                 key, value = tag.replace('"', "").split("=")
                 tags[key] = value
@@ -554,17 +681,17 @@ class Services(models.Model):
     @property
     def owner(self):
         tags = self.tags_to_dict()
-        return tags.get('owner', '')
+        return tags.get("owner", "")
 
     def save(self, *args, **kwargs):
 
         if self.ws_id is None:
-            self.ws = Workspaces.objects.get(name='default')
+            self.ws = Workspaces.objects.get(name="default")
 
         if self.port == 80:
-            self.protocol = 'http'
+            self.protocol = "http"
         else:
-            self.protocol = 'https'
+            self.protocol = "https"
 
         super(Services, self).save(*args, **kwargs)
 
@@ -580,22 +707,26 @@ class Sessions(models.Model):
     class Meta:
         managed = False
         app_label = "kong"
-        db_table = 'sessions'
+        db_table = "sessions"
 
 
 class Snis(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     created_at = models.DateTimeField(blank=True, null=True, auto_now_add=True)
     name = models.TextField(unique=True)
-    certificate = models.ForeignKey(Certificates, models.DO_NOTHING, blank=True, null=True)
-    tags = ArrayField(models.TextField(), blank=True, null=True)  # This field type is a guess.
-    ws = models.ForeignKey('Workspaces', models.DO_NOTHING, blank=True, null=True)
+    certificate = models.ForeignKey(
+        Certificates, models.DO_NOTHING, blank=True, null=True
+    )
+    tags = ArrayField(
+        models.TextField(), blank=True, null=True
+    )  # This field type is a guess.
+    ws = models.ForeignKey("Workspaces", models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
         managed = False
         app_label = "kong"
-        db_table = 'snis'
-        unique_together = (('id', 'ws'),)
+        db_table = "snis"
+        unique_together = (("id", "ws"),)
 
     def __str__(self):
         return str(self.id)
@@ -603,7 +734,7 @@ class Snis(models.Model):
     def save(self, *args, **kwargs):
 
         if self.ws_id is None:
-            self.ws = Workspaces.objects.get(name='default')
+            self.ws = Workspaces.objects.get(name="default")
 
         super(Snis, self).save(*args, **kwargs)
 
@@ -611,28 +742,34 @@ class Snis(models.Model):
 class Tags(models.Model):
     entity_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     entity_name = models.TextField(blank=True, null=True)
-    tags = ArrayField(models.TextField(), blank=True, null=True)  # This field type is a guess.
+    tags = ArrayField(
+        models.TextField(), blank=True, null=True
+    )  # This field type is a guess.
 
     class Meta:
         managed = False
         app_label = "kong"
-        db_table = 'tags'
+        db_table = "tags"
 
 
 class Targets(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=True)
     created_at = models.DateTimeField(blank=True, null=True, auto_now_add=True)
-    upstream = models.ForeignKey('Upstreams', models.DO_NOTHING, blank=True, null=True)
+    upstream = models.ForeignKey("Upstreams", models.DO_NOTHING, blank=True, null=True)
     target = models.TextField()
     weight = models.IntegerField(default=100)
-    tags = ArrayField(models.TextField(), blank=True, null=True)  # This field type is a guess.
-    ws = models.ForeignKey('Workspaces', models.DO_NOTHING, blank=True, null=True, related_name='targets')
+    tags = ArrayField(
+        models.TextField(), blank=True, null=True
+    )  # This field type is a guess.
+    ws = models.ForeignKey(
+        "Workspaces", models.DO_NOTHING, blank=True, null=True, related_name="targets"
+    )
 
     class Meta:
         managed = False
         app_label = "kong"
-        db_table = 'targets'
-        unique_together = (('id', 'ws'),)
+        db_table = "targets"
+        unique_together = (("id", "ws"),)
 
     def __str__(self):
         return str(self.id)
@@ -640,12 +777,12 @@ class Targets(models.Model):
     def save(self, *args, **kwargs):
 
         if self.ws_id is None:
-            self.ws = Workspaces.objects.get(name='default')
+            self.ws = Workspaces.objects.get(name="default")
 
         # Default port 80
-        target_split = self.target.split(':')
+        target_split = self.target.split(":")
         if len(target_split) == 1:
-            self.target += ':80'
+            self.target += ":80"
 
         super(Targets, self).save(*args, **kwargs)
 
@@ -660,8 +797,8 @@ class Ttls(models.Model):
     class Meta:
         managed = False
         app_label = "kong"
-        db_table = 'ttls'
-        unique_together = (('primary_key_value', 'table_name'),)
+        db_table = "ttls"
+        unique_together = (("primary_key_value", "table_name"),)
 
 
 class Upstreams(models.Model):
@@ -673,20 +810,29 @@ class Upstreams(models.Model):
     hash_on_header = models.TextField(blank=True, null=True)
     hash_fallback_header = models.TextField(blank=True, null=True)
     hash_on_cookie = models.TextField(blank=True, null=True)
-    hash_on_cookie_path = models.TextField(blank=True, null=True, default='/')
+    hash_on_cookie_path = models.TextField(blank=True, null=True, default="/")
     slots = models.IntegerField(default=10000)
     healthchecks = models.JSONField(blank=True, null=True)
-    tags = ArrayField(models.TextField(), blank=True, null=True)  # This field type is a guess.
+    tags = ArrayField(
+        models.TextField(), blank=True, null=True
+    )  # This field type is a guess.
     algorithm = models.TextField(blank=True, null=True)
     host_header = models.TextField(blank=True, null=True)
-    client_certificate = models.ForeignKey(Certificates, models.DO_NOTHING, blank=True, null=True)
-    ws = models.ForeignKey('Workspaces', models.DO_NOTHING, blank=True, null=True, related_name='upstreams')
+    client_certificate = models.ForeignKey(
+        Certificates, models.DO_NOTHING, blank=True, null=True
+    )
+    ws = models.ForeignKey(
+        "Workspaces", models.DO_NOTHING, blank=True, null=True, related_name="upstreams"
+    )
 
     class Meta:
         managed = False
         app_label = "kong"
-        db_table = 'upstreams'
-        unique_together = (('id', 'ws'), ('ws', 'name'),)
+        db_table = "upstreams"
+        unique_together = (
+            ("id", "ws"),
+            ("ws", "name"),
+        )
 
     def __str__(self):
         if self.name:
@@ -696,28 +842,33 @@ class Upstreams(models.Model):
     def save(self, *args, **kwargs):
 
         if self.ws_id is None:
-            self.ws = Workspaces.objects.get(name='default')
-        self.hash_fallback = 'none'
-        self.hash_on = 'none'
+            self.ws = Workspaces.objects.get(name="default")
+        self.hash_fallback = "none"
+        self.hash_on = "none"
         super(Upstreams, self).save(*args, **kwargs)
 
 
 class VaultsBeta(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=True)
-    ws = models.ForeignKey('Workspaces', models.DO_NOTHING, blank=True, null=True)
+    ws = models.ForeignKey("Workspaces", models.DO_NOTHING, blank=True, null=True)
     prefix = models.TextField(unique=True, blank=True, null=True)
     name = models.TextField()
     description = models.TextField(blank=True, null=True)
     config = models.JSONField()
     created_at = models.DateTimeField(blank=True, null=True)
     updated_at = models.DateTimeField(blank=True, null=True)
-    tags = ArrayField(models.TextField(), blank=True, null=True)  # This field type is a guess.
+    tags = ArrayField(
+        models.TextField(), blank=True, null=True
+    )  # This field type is a guess.
 
     class Meta:
         managed = False
         app_label = "kong"
-        db_table = 'vaults_beta'
-        unique_together = (('id', 'ws'), ('prefix', 'ws'),)
+        db_table = "vaults_beta"
+        unique_together = (
+            ("id", "ws"),
+            ("prefix", "ws"),
+        )
 
 
 class Workspaces(models.Model):
@@ -731,7 +882,7 @@ class Workspaces(models.Model):
     class Meta:
         managed = False
         app_label = "kong"
-        db_table = 'workspaces'
+        db_table = "workspaces"
 
     def __str__(self):
         return str(self.id)
@@ -742,17 +893,14 @@ class KongEntityMetadata(models.Model):
     description = models.TextField(blank=True, null=True)
     config = models.JSONField(blank=True, null=True)
     entity_id = models.UUIDField(default=uuid.uuid4)
-    entity_type = models.IntegerField(
-        default=KONG_ROUTE,
-        choices=KONG_CHOICES
-    )
+    entity_type = models.IntegerField(default=KONG_ROUTE, choices=KONG_CHOICES)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         managed = False
         app_label = "kong"
-        db_table = 'metadatas'
+        db_table = "metadatas"
 
     def __str__(self):
         return str(self.id)
@@ -760,7 +908,9 @@ class KongEntityMetadata(models.Model):
     @classmethod
     def get_entity_type_description(cls, entity_type, entity_id):
         try:
-            obj = cls.objects.filter(entity_type=entity_type, entity_id=entity_id).first()
+            obj = cls.objects.filter(
+                entity_type=entity_type, entity_id=entity_id
+            ).first()
             return obj.description if obj and obj.description else ""
         except Exception as error:
             print("Metadata get_entity_type_description ERROR:", error)
@@ -769,8 +919,14 @@ class KongEntityMetadata(models.Model):
     @classmethod
     def get_entity_type_has_cert(cls, entity_type, entity_id):
         try:
-            obj = cls.objects.filter(entity_type=entity_type, entity_id=entity_id).first()
-            return obj.config["has_cert"] if obj and obj.config and "has_cert" in obj.config else False
+            obj = cls.objects.filter(
+                entity_type=entity_type, entity_id=entity_id
+            ).first()
+            return (
+                obj.config["has_cert"]
+                if obj and obj.config and "has_cert" in obj.config
+                else False
+            )
         except Exception as error:
             print("Metadata get_entity_type_description ERROR:", error)
             return ""
@@ -783,13 +939,15 @@ class KongEntityMetadata(models.Model):
             has_cert = data["has_cert"] if "has_cert" in data else False
 
             if entity_id:
-                obj = cls.objects.filter(entity_type=entity_type, entity_id=entity_id).first()
+                obj = cls.objects.filter(
+                    entity_type=entity_type, entity_id=entity_id
+                ).first()
                 if not obj:
                     obj = cls.objects.create(
                         entity_id=entity_id,
                         entity_type=entity_type,
                         description=description,
-                        config={"has_cert": has_cert}
+                        config={"has_cert": has_cert},
                     )
                     if entity_type == KONG_ROUTE:
                         route = Routes.objects.get(id=entity_id)
@@ -813,7 +971,9 @@ class KongEntityMetadata(models.Model):
     @classmethod
     def delete_metadata(cls, entity_type, entity_id):
         try:
-            metadata = cls.objects.filter(entity_type=entity_type, entity_id=entity_id).first()
+            metadata = cls.objects.filter(
+                entity_type=entity_type, entity_id=entity_id
+            ).first()
             if metadata:
                 metadata_id = metadata.id
                 metadata.delete()
@@ -834,7 +994,11 @@ class KongEntityMetadata(models.Model):
     @classmethod
     def search_metadata(cls, entity_ids, entity_type, q):
         try:
-            return cls.objects.filter(entity_id__in=entity_ids, entity_type=entity_type, description__icontains=q).all()
+            return cls.objects.filter(
+                entity_id__in=entity_ids,
+                entity_type=entity_type,
+                description__icontains=q,
+            ).all()
         except Exception as error:
             print("KongEntityMetadata search_metadata ERROR:", error)
             return None

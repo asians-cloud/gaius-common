@@ -6,7 +6,9 @@ from .base import env
 # https://docs.djangoproject.com/en/dev/ref/settings/#secret-key
 SECRET_KEY = env("DJANGO_SECRET_KEY")
 # https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
-ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["*.asians.cloud", "127.0.0.1"])
+ALLOWED_HOSTS = env.list(
+    "DJANGO_ALLOWED_HOSTS", default=["*.asians.cloud", "127.0.0.1"]
+)
 
 # DATABASES
 # ------------------------------------------------------------------------------
@@ -15,13 +17,13 @@ DATABASES["default"]["CONN_MAX_AGE"] = env.int("CONN_MAX_AGE", default=60)  # no
 
 # CACHES
 # ------------------------------------------------------------------------------
-REDIS_HOST = env.str('REDIS_HOST', 'redis-master')
-REDIS_K8S_HOST = env.str('REDIS_K8S_HOST', 'redis-master')
-REDIS_PASSWORD = env.str('REDIS_PASSWORD', 'hZg7kXzvPN')
-REDIS_K8S_PASSWORD = env.str('REDIS_K8S_PASSWORD', 'hZg7kXzvPN')
-REDIS_PORT = env.int('REDIS_PORT', 6379)
-REDIS_DATABASE_CACHE = env.int('REDIS_DATABASE_CACHE', 2)
-REDIS_URL = f'redis://:{REDIS_K8S_PASSWORD}@{REDIS_K8S_HOST}:{REDIS_PORT}/{REDIS_DATABASE_CACHE}'
+REDIS_HOST = env.str("REDIS_HOST", "redis-master")
+REDIS_K8S_HOST = env.str("REDIS_K8S_HOST", "redis-master")
+REDIS_PASSWORD = env.str("REDIS_PASSWORD", "hZg7kXzvPN")
+REDIS_K8S_PASSWORD = env.str("REDIS_K8S_PASSWORD", "hZg7kXzvPN")
+REDIS_PORT = env.int("REDIS_PORT", 6379)
+REDIS_DATABASE_CACHE = env.int("REDIS_DATABASE_CACHE", 2)
+REDIS_URL = f"redis://:{REDIS_K8S_PASSWORD}@{REDIS_K8S_HOST}:{REDIS_PORT}/{REDIS_DATABASE_CACHE}"
 
 CACHES = {
     "default": {
@@ -68,8 +70,10 @@ if env.bool("DJANGO_USE_STORAGE", False):
     INSTALLED_APPS += ["storages"]  # noqa F405
     AZURE_ACCOUNT_NAME = env.str("DJANGO_AZURE_ACCOUNT_NAME")
     AZURE_ACCOUNT_KEY = env.str("DJANGO_AZURE_ACCOUNT_KEY")
-    AZURE_CUSTOM_DOMAIN = env.str("DJANGO_AZURE_CUSTOM_DOMAIN", f'{AZURE_ACCOUNT_NAME}.blob.core.windows.net')
-    #AZURE_FRONT_DOMAIN = env.str("DJANGO_AZURE_FRONT_DOMAIN", f'{AZURE_ACCOUNT_NAME}.blob.core.windows.net')
+    AZURE_CUSTOM_DOMAIN = env.str(
+        "DJANGO_AZURE_CUSTOM_DOMAIN", f"{AZURE_ACCOUNT_NAME}.blob.core.windows.net"
+    )
+    # AZURE_FRONT_DOMAIN = env.str("DJANGO_AZURE_FRONT_DOMAIN", f'{AZURE_ACCOUNT_NAME}.blob.core.windows.net')
 
     AZURE_OVERWRITE_FILES = True
 
@@ -78,14 +82,14 @@ if env.bool("DJANGO_USE_STORAGE", False):
     STATICFILES_STORAGE = "gaius_common.utils.storages.AzureStaticStorage"
     # COLLECTFAST_STRATEGY = "collectfast.strategies.gcloud.GoogleCloudStrategy"
 
-    #https://gaiusstorage.blob.core.windows.net/static/image_2021_11_11T02_59_05_877Z.png
+    # https://gaiusstorage.blob.core.windows.net/static/image_2021_11_11T02_59_05_877Z.png
     # AZURE_CUSTOM_DOMAIN = f'{AZURE_ACCOUNT_NAME}.blob.core.windows.net'
-    STATIC_URL = f'https://{AZURE_CUSTOM_DOMAIN}/static/'
+    STATIC_URL = f"https://{AZURE_CUSTOM_DOMAIN}/static/"
 
     # MEDIA
     # ------------------------------------------------------------------------------
     DEFAULT_FILE_STORAGE = "gaius_common.utils.storages.AzureMediaStorage"
-    MEDIA_URL = f'https://{AZURE_CUSTOM_DOMAIN}/media/'
+    MEDIA_URL = f"https://{AZURE_CUSTOM_DOMAIN}/media/"
 
 # TEMPLATES
 # ------------------------------------------------------------------------------
@@ -127,7 +131,7 @@ ANYMAIL = {}
 # Collectfast
 # ------------------------------------------------------------------------------
 # https://github.com/antonagestam/collectfast#installation
-#INSTALLED_APPS = ["collectfast"] + INSTALLED_APPS  # noqa F405
+# INSTALLED_APPS = ["collectfast"] + INSTALLED_APPS  # noqa F405
 
 # LOGGING
 # ------------------------------------------------------------------------------

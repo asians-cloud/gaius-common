@@ -11,6 +11,7 @@ settings:
 Each function mirrors the response shape of the Celery task it replaces, so
 callers can swap `send_task(...).get()` for these one-for-one.
 """
+
 import logging
 from urllib.parse import urljoin
 

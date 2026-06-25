@@ -1,5 +1,6 @@
 from celery import Task
-from redis.exceptions import ConnectionError as RedisConnectionError, TimeoutError as RedisTimeoutError
+from redis.exceptions import ConnectionError as RedisConnectionError
+from redis.exceptions import TimeoutError as RedisTimeoutError
 
 
 # Retry on transient Redis failures (network drops, broker timeouts).
@@ -7,6 +8,6 @@ from redis.exceptions import ConnectionError as RedisConnectionError, TimeoutErr
 # (wrong type / syntax) that retrying does not fix.
 class RedisTaskWithRetry(Task):
     autoretry_for = (RedisConnectionError, RedisTimeoutError)
-    retry_kwargs = {'max_retries': 3}
+    retry_kwargs = {"max_retries": 3}
     retry_backoff = True
     default_retry_delay = 10
