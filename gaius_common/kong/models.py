@@ -135,7 +135,7 @@ class Certificates(models.Model):
 
     def tags_to_dict(self):
         tags = {}
-        if tags:
+        if self.tags:
             for tag in self.tags:
                 key, value = tag.replace('"', "").split("=")
                 tags[key] = value
@@ -928,8 +928,8 @@ class KongEntityMetadata(models.Model):
                 else False
             )
         except Exception as error:
-            print("Metadata get_entity_type_description ERROR:", error)
-            return ""
+            print("Metadata get_entity_type_has_cert ERROR:", error)
+            return False
 
     @classmethod
     def create_or_update(cls, entity_type, data):

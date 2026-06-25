@@ -16,8 +16,18 @@ def update_lastname_keycloak(cname):
     # AppRegistryNotReady if the app registry isn't loaded yet.
     from django.contrib.auth.models import User
 
-    user = User.objects.get(username__icontains=cname)
-    realm = user.oidc_profile.realm.name
+    try:
+        user = User.objects.get(username__icontains=cname)
+    except (User.DoesNotExist, User.MultipleObjectsReturned) as exc:
+        logger.error("Cannot resolve a unique user for cname %s: %s", cname, exc)
+        return
+
+    oidc_profile = getattr(user, "oidc_profile", None)
+    realm_obj = getattr(oidc_profile, "realm", None)
+    realm = getattr(realm_obj, "name", None)
+    if not realm:
+        logger.error("User %s has no associated Keycloak realm", user.username)
+        return
 
     token = requests.post(
         f"https://{settings.KEYCLOAK_CREDENTIALS[realm]['domain']}/auth/realms/{realm}/protocol/openid-connect/token",

@@ -32,11 +32,11 @@ class HealthCheckMiddleware(object):
             from django.db import connections
 
             for name in connections:
-                cursor = connections[name].cursor()
-                cursor.execute("SELECT 1;")
-                row = cursor.fetchone()
-                if row is None:
-                    return HttpResponseServerError("db: invalid response")
+                with connections[name].cursor() as cursor:
+                    cursor.execute("SELECT 1;")
+                    row = cursor.fetchone()
+                    if row is None:
+                        return HttpResponseServerError("db: invalid response")
         except Exception as e:
             logger.exception(e)
             return HttpResponseServerError("db: cannot connect to database.")

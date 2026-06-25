@@ -213,7 +213,7 @@ class DomainChecker(ABC):
         ):  # Naked domain
             try:
                 ip = a.response.answer[0][0].address
-                v = requests.get("http://%s/ok" % ip)
+                v = requests.get("http://%s/ok" % ip, timeout=2)
                 if v.text == "OK":
                     return True
             except Exception:
