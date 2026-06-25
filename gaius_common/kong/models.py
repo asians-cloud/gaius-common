@@ -1,7 +1,10 @@
+import logging
 import uuid
 
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
+
+logger = logging.getLogger(__name__)
 
 KONG_ROUTE = 1
 KONG_SERVICE = 2
@@ -913,7 +916,7 @@ class KongEntityMetadata(models.Model):
             ).first()
             return obj.description if obj and obj.description else ""
         except Exception as error:
-            print("Metadata get_entity_type_description ERROR:", error)
+            logger.exception("Metadata get_entity_type_description error: %s", error)
             return ""
 
     @classmethod
@@ -928,7 +931,7 @@ class KongEntityMetadata(models.Model):
                 else False
             )
         except Exception as error:
-            print("Metadata get_entity_type_has_cert ERROR:", error)
+            logger.exception("Metadata get_entity_type_has_cert error: %s", error)
             return False
 
     @classmethod
@@ -965,7 +968,7 @@ class KongEntityMetadata(models.Model):
 
                     obj.save()
         except Exception as error:
-            print("Metadata create_or_update ERROR:", error)
+            logger.exception("Metadata create_or_update error: %s", error)
             return None
 
     @classmethod
@@ -988,7 +991,7 @@ class KongEntityMetadata(models.Model):
                         service.metadata_id = ""
                         service.save()
         except Exception as error:
-            print("KongEntityMetadata delete_metadata ERROR:", error)
+            logger.exception("KongEntityMetadata delete_metadata error: %s", error)
             return None
 
     @classmethod
@@ -1000,5 +1003,5 @@ class KongEntityMetadata(models.Model):
                 description__icontains=q,
             ).all()
         except Exception as error:
-            print("KongEntityMetadata search_metadata ERROR:", error)
+            logger.exception("KongEntityMetadata search_metadata error: %s", error)
             return None
