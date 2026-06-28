@@ -393,58 +393,174 @@ def _is_parse_entities_error(exc):
     return "can't parse entities" in str(exc).lower()
 
 
+# --- AC-2227 central bot router + send throttle ----------------------------
+#
+# Five bots by message CLASS; each destination Topic maps to exactly one class,
+# so a service no longer needs its own bot token — the sender picks the bot from
+# the destination topic (or an explicit ``bot_class``). Legacy callers still pass
+# their own ``bot``; it is used only when no central token is configured.
+_BOT_TOKEN_ENV = {
+    "command":  "GAIUS_TGBOT_TOKEN",                  # @GaiusTgBot — interactive commands (3794)
+    "report":   "GAIUS_REPORT_BOT_TOKEN",             # @GaiusReportBot — business + reports
+    "service":  "GAIUS_INTERNAL_SERVICE_BOT_TOKEN",   # @GaiusInternalServiceBot — errors/ops
+    "alert":    "GAIUS_ALERT_BOT_TOKEN",              # @GaiusAlertBot — all alerts (incl. ES/EA2)
+    "ci":       "GAIUS_JENKINS_BOT_TOKEN",            # @GaiusJenkinsBot — CI/build/deploy
+    "crowdsec": "GAIUS_CROWDSEC_BOT_TOKEN",           # @GaiusCrowdsecBot — IP-block / ban notices (3789)
+}
+
+# thread_id -> message class (a topic maps to exactly one bot = sender identity).
+_TOPIC_CLASS = {
+    3794: "command",
+    3784: "report", 3788: "report", 3790: "report",
+    3782: "service", 3785: "service", 3792: "service", 3793: "service",
+    3783: "alert", 3786: "alert", 3787: "alert", 3791: "alert", 192: "alert",
+    3789: "crowdsec",
+}
+
+_bot_cache = {}
+_bot_cache_lock = threading.Lock()
+
+
+def _class_for(chat_id=None, bot_class=None):
+    if bot_class:
+        return bot_class
+    if chat_id is not None:
+        try:
+            return _TOPIC_CLASS.get(thread_id_of(chat_id))
+        except Exception:
+            return None
+    return None
+
+
+def bot_token_for(chat_id=None, bot_class=None):
+    """The centrally-mapped bot token for a destination topic / class, or ``""``."""
+    cls = _class_for(chat_id, bot_class)
+    if not cls:
+        return ""
+    return os.environ.get(_BOT_TOKEN_ENV.get(cls, ""), "") or ""
+
+
+def bot_for(chat_id=None, bot_class=None):
+    """A cached ``telegram.Bot`` for the central token of this topic/class (or None)."""
+    token = bot_token_for(chat_id, bot_class)
+    if not token:
+        return None
+    with _bot_cache_lock:
+        b = _bot_cache.get(token)
+        if b is None:
+            b = telegram.Bot(token)
+            _bot_cache[token] = b
+        return b
+
+
+# Per-chat send throttle. Telegram allows ~1 msg/s sustained per chat (bursts to
+# ~20); the cert auto-renew loop blows past that, 429s, and used to drop to the
+# silent Google Chat fallback. A token bucket smooths bursts proactively, and the
+# 429 ``retry_after`` honoured below is the cross-process/pod backstop. Env-tunable.
+_THROTTLE_RATE = float(os.environ.get("NOTIFICATION_MSGS_PER_SEC", "1") or 1)
+_THROTTLE_BURST = int(os.environ.get("NOTIFICATION_BURST", "20") or 20)
+_THROTTLE_MAX_RETRIES = int(os.environ.get("NOTIFICATION_MAX_RETRIES", "4") or 4)
+_THROTTLE_MAX_BACKOFF = float(os.environ.get("NOTIFICATION_MAX_BACKOFF", "60") or 60)
+
+_buckets = {}
+_buckets_lock = threading.Lock()
+
+
+def _base_chat(chat_id):
+    try:
+        return chat_id_of(chat_id)
+    except Exception:
+        return chat_id
+
+
+def _throttle(chat_id):
+    """Block until a send token is available for this chat (token bucket)."""
+    if chat_id is None or _THROTTLE_RATE <= 0:
+        return
+    key = _base_chat(chat_id)
+    now = time.monotonic()
+    with _buckets_lock:
+        tokens, ts = _buckets.get(key, (float(_THROTTLE_BURST), now))
+        tokens = min(float(_THROTTLE_BURST), tokens + (now - ts) * _THROTTLE_RATE)
+        if tokens >= 1:
+            _buckets[key] = (tokens - 1, now)
+            return
+        wait = (1 - tokens) / _THROTTLE_RATE
+        _buckets[key] = (0.0, now + wait)
+    time.sleep(min(wait, _THROTTLE_MAX_BACKOFF))
+
+
+def _retry_after(exc):
+    """Seconds to wait if ``exc`` is a Telegram 429 RetryAfter, else None."""
+    ra = getattr(exc, "retry_after", None)
+    if isinstance(ra, (int, float)):
+        return float(ra)
+    try:
+        from telegram import error as tg_error
+
+        cls = getattr(tg_error, "RetryAfter", None)
+        if cls is not None and isinstance(exc, cls):
+            return float(getattr(exc, "retry_after", 1) or 1)
+    except Exception:
+        pass
+    return None
+
+
 def send_telegram_notification(
-    bot, chat_id, message, parse_mode=None, disable_web_page_preview=False, timeout=None
+    bot=None, chat_id=None, message=None, parse_mode=None,
+    disable_web_page_preview=False, timeout=None, bot_class=None,
 ):
-    """Send a notification to Telegram (one retry), falling back to Google Chat.
+    """Send a notification to Telegram, falling back to Google Chat.
+
+    AC-2227: the bot is chosen centrally from the destination ``chat_id`` topic
+    (or an explicit ``bot_class``); the legacy per-service ``bot`` is used only
+    when no central token is configured. Sends are rate-limited per chat and
+    honour Telegram's 429 ``retry_after`` (sleep+retry) before degrading to the
+    Google Chat fallback, so a renewal burst no longer silently drops to gchat.
 
     ``chat_id`` is normally a :class:`Topic` constant, e.g. ``Topic.PAYMENTS``.
     """
-    try:
-        _send_once(
-            bot,
-            chat_id,
-            message,
-            parse_mode,
-            disable_web_page_preview,
-            timeout,
-        )
-        return True
+    central = bot_for(chat_id, bot_class)
+    if central is not None:
+        bot = central
+    if bot is None:
+        # No central token configured and no legacy bot passed — can't reach
+        # Telegram; degrade to Google Chat rather than raising.
+        _gchat_fallback(message or "")
+        return False
 
-    except Exception as first_exc:
-        # A parse-entities error is deterministic, so retrying the same HTML
-        # fails identically. Drop parse_mode on the retry: the message still
-        # reaches Telegram (markup shows as literal text) instead of degrading
-        # all the way to the Google Chat fallback. Any other error retries as-is.
-        retry_parse_mode = None if _is_parse_entities_error(first_exc) else parse_mode
+    _throttle(chat_id)
+
+    pm = parse_mode
+    last_exc = None
+    for attempt in range(_THROTTLE_MAX_RETRIES):
         try:
-            _send_once(
-                bot,
-                chat_id,
-                message,
-                retry_parse_mode,
-                disable_web_page_preview,
-                timeout,
-            )
+            _send_once(bot, chat_id, message, pm, disable_web_page_preview, timeout)
             return True
+        except Exception as exc:
+            last_exc = exc
+            # 429: Telegram tells us exactly how long to wait — honour it instead
+            # of burning the retry and dropping to gchat.
+            ra = _retry_after(exc)
+            if ra is not None and attempt < _THROTTLE_MAX_RETRIES - 1:
+                time.sleep(min(ra + 0.5, _THROTTLE_MAX_BACKOFF))
+                continue
+            # A parse-entities error is deterministic — drop parse_mode and retry
+            # once so the text still lands (markup shown literally).
+            if pm is not None and _is_parse_entities_error(exc) and attempt < _THROTTLE_MAX_RETRIES - 1:
+                pm = None
+                continue
+            break
 
-        except Exception as e:
-            message = f"""
-                {message}
-
-                *Error:*
-                {_telegram_error_details(e)}
-
-                *File Path:*
-                {traceback.extract_tb(e.__traceback__)[-1]}
-
-                *Traceback:*
-                {traceback.format_exc()}
-            """
-
-            _gchat_fallback(message)
-
-            return False
+    where = (
+        traceback.extract_tb(last_exc.__traceback__)[-1]
+        if last_exc is not None and last_exc.__traceback__ is not None
+        else "n/a"
+    )
+    _gchat_fallback(
+        f"{message}\n\n*Error:*\n{_telegram_error_details(last_exc)}\n\n*File Path:*\n{where}"
+    )
+    return False
 
 
 # --- Logging handler: routes errors to the right notification topic ---------
@@ -521,7 +637,11 @@ class TelegramLogHandler(logging.Handler):
                 suppressed = self._suppressed.pop(sig, 0)
                 self._last_sent[sig] = now
 
-            bot = telegram.Bot(self.bot_token)
+            # AC-2227: the bot is resolved centrally from self.chat_id's topic
+            # (CRITICAL/APP errors -> @GaiusInternalServiceBot). self.bot_token is
+            # only a dev fallback when no central token is configured — this is what
+            # fixes services whose own bot was never added to the group.
+            legacy = telegram.Bot(self.bot_token) if self.bot_token else None
             prefix = f"[{self.service}] " if self.service else ""
             text = prefix + self.format(record)
             if suppressed:
@@ -530,7 +650,7 @@ class TelegramLogHandler(logging.Handler):
                     f"{self.throttle_seconds}s)"
                 )
             send_telegram_notification(
-                bot,
+                legacy,
                 self.chat_id,
                 text,
                 parse_mode=None,
