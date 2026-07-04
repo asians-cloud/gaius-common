@@ -292,7 +292,11 @@ def send_long_message_as_reply(bot, notify_message, chat_id, parse_mode):
                     **thread_kwargs,
                 )
 
-    asyncio.run(_run())
+    # Same per-bot serialisation as send_telegram_notification: overlapping
+    # ``async with bot:`` blocks on a shared Bot shut down each other's
+    # HTTPXRequest (see _send_lock_for).
+    with _send_lock_for(bot):
+        asyncio.run(_run())
 
 
 # --- Google Chat fallback (silent until a webhook is configured) ------------
@@ -420,6 +424,27 @@ _TOPIC_CLASS = {
 _bot_cache = {}
 _bot_cache_lock = threading.Lock()
 
+# Serialise sends per bot. The cached central Bot is shared across worker
+# threads (e.g. celery --pool=threads), and on PTB v20+ every send runs inside
+# ``async with bot:`` whose exit calls ``shutdown()``. Two overlapping sends on
+# the same Bot let one thread tear down the HTTPXRequest the other is mid-flight
+# on — Telegram then fails with ``RuntimeError('This HTTPXRequest is not
+# initialized!')`` (wrapped in NetworkError) and the message silently degrades
+# to the Google Chat fallback. Locks are keyed by token so a per-call legacy
+# Bot with the same token serialises against the cached one too.
+_send_locks = {}
+_send_locks_guard = threading.Lock()
+
+
+def _send_lock_for(bot):
+    key = getattr(bot, "token", None) or id(bot)
+    with _send_locks_guard:
+        lock = _send_locks.get(key)
+        if lock is None:
+            lock = threading.Lock()
+            _send_locks[key] = lock
+        return lock
+
 
 def _class_for(chat_id=None, bot_class=None):
     if bot_class:
@@ -506,6 +531,25 @@ def _retry_after(exc):
     return None
 
 
+def _is_transient_network_error(exc):
+    """True for a PTB transport failure worth a short backoff + retry.
+
+    ``NetworkError`` covers connection resets, timeouts and the httpx pool
+    being torn down under us — all transient. ``BadRequest`` subclasses
+    ``NetworkError`` in PTB but is deterministic (same call always fails), so
+    it is excluded; retrying it would only delay the Google Chat fallback.
+    """
+    try:
+        from telegram import error as tg_error
+    except Exception:
+        return False
+    net = getattr(tg_error, "NetworkError", None)
+    bad = getattr(tg_error, "BadRequest", None)
+    if net is None or not isinstance(exc, net):
+        return False
+    return bad is None or not isinstance(exc, bad)
+
+
 def send_telegram_notification(
     bot=None, chat_id=None, message=None, parse_mode=None,
     disable_web_page_preview=False, timeout=None, bot_class=None,
@@ -531,11 +575,13 @@ def send_telegram_notification(
 
     _throttle(chat_id)
 
+    send_lock = _send_lock_for(bot)
     pm = parse_mode
     last_exc = None
     for attempt in range(_THROTTLE_MAX_RETRIES):
         try:
-            _send_once(bot, chat_id, message, pm, disable_web_page_preview, timeout)
+            with send_lock:
+                _send_once(bot, chat_id, message, pm, disable_web_page_preview, timeout)
             return True
         except Exception as exc:
             last_exc = exc
@@ -549,6 +595,12 @@ def send_telegram_notification(
             # once so the text still lands (markup shown literally).
             if pm is not None and _is_parse_entities_error(exc) and attempt < _THROTTLE_MAX_RETRIES - 1:
                 pm = None
+                continue
+            # Transient transport failures (connection reset, timeout, httpx
+            # pool shutdown race) deserve a short backoff + retry before the
+            # message is written off to the Google Chat fallback.
+            if _is_transient_network_error(exc) and attempt < _THROTTLE_MAX_RETRIES - 1:
+                time.sleep(min(1.0 + attempt, _THROTTLE_MAX_BACKOFF))
                 continue
             break
 

@@ -81,6 +81,89 @@ def test_no_central_token_and_no_bot_falls_back_to_gchat():
     assert ok is False
 
 
+def test_concurrent_sends_serialize_on_shared_bot():
+    # Regression: worker threads (celery --pool=threads) share the cached
+    # central Bot; on PTB v20+ each send wraps ``async with bot:`` whose exit
+    # shuts down the HTTPXRequest, so overlapping sends killed each other
+    # ("This HTTPXRequest is not initialized!") and dropped to Google Chat.
+    import threading
+    import time as real_time
+
+    active, max_active = [0], [0]
+    guard = threading.Lock()
+
+    def slow_send(bot, *a, **k):
+        with guard:
+            active[0] += 1
+            max_active[0] = max(max_active[0], active[0])
+        real_time.sleep(0.02)
+        with guard:
+            active[0] -= 1
+
+    with mock.patch.object(tg.telegram, "Bot", FakeBot, create=True), \
+         mock.patch.object(tg, "_send_once", slow_send):
+        tg._bot_cache.clear()
+        threads = [
+            threading.Thread(
+                target=tg.send_telegram_notification,
+                args=(None, tg.Topic.CERTIFICATES, "m"),
+            )
+            for _ in range(5)
+        ]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+    assert max_active[0] == 1   # sends on the same bot never overlap
+
+
+class FakeErrors:
+    """Stand-in for telegram.error with PTB's NetworkError/BadRequest shape."""
+
+    class NetworkError(Exception):
+        pass
+
+    class BadRequest(NetworkError):
+        pass
+
+
+def test_transient_network_error_retries_then_success():
+    calls = []
+
+    def flaky(bot, *a, **k):
+        calls.append(1)
+        if len(calls) == 1:
+            raise FakeErrors.NetworkError(
+                "Unknown error in HTTP implementation: "
+                "RuntimeError('This HTTPXRequest is not initialized!')"
+            )
+
+    with mock.patch.object(tg.telegram, "Bot", FakeBot, create=True), \
+         mock.patch.object(tg.telegram, "error", FakeErrors, create=True), \
+         mock.patch.object(tg.time, "sleep", lambda s: None), \
+         mock.patch.object(tg, "_send_once", flaky):
+        tg._bot_cache.clear()
+        ok = tg.send_telegram_notification(None, tg.Topic.CERTIFICATES, "x")
+    assert ok is True and len(calls) == 2   # transient failure retried, landed
+
+
+def test_bad_request_is_not_retried():
+    calls = []
+
+    def always_bad(bot, *a, **k):
+        calls.append(1)
+        raise FakeErrors.BadRequest("chat not found")
+
+    with mock.patch.object(tg.telegram, "Bot", FakeBot, create=True), \
+         mock.patch.object(tg.telegram, "error", FakeErrors, create=True), \
+         mock.patch.object(tg.time, "sleep", lambda s: None), \
+         mock.patch.object(tg, "_send_once", always_bad), \
+         mock.patch.object(tg, "_gchat_fallback", lambda m: True):
+        tg._bot_cache.clear()
+        ok = tg.send_telegram_notification(None, tg.Topic.CERTIFICATES, "x")
+    assert ok is False and len(calls) == 1   # deterministic error: no retry
+
+
 def test_throttle_smooths_burst():
     sleeps = []
     with mock.patch.object(tg, "_THROTTLE_RATE", 1.0), \
