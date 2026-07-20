@@ -54,6 +54,20 @@ def _truncate_for_telegram(message):
     return message[:head] + marker + message[-tail:]
 
 
+_TELEGRAM_SAFE_ENTITIES = (
+    ("&#x27;", "'"),
+    ("&#39;", "'"),
+    ("&quot;", '"'),
+    ("&#34;", '"'),
+)
+
+
+def _unescape_quotes_for_telegram(message):
+    for entity, char in _TELEGRAM_SAFE_ENTITIES:
+        message = message.replace(entity, char)
+    return message
+
+
 # --- Notification group + topics -------------------------------------------
 #
 # Single source of truth for where notifications land. The group id can be
@@ -170,9 +184,13 @@ def _send_once(bot, chat_id, message, parse_mode, disable_web_page_preview, time
 
     parsed_chat_id, message_thread_id = _parse_chat_id(chat_id)
 
+    text = message
+    if isinstance(text, str) and str(parse_mode or "").upper() == "HTML":
+        text = _unescape_quotes_for_telegram(text)
+
     kwargs = {
         "chat_id": parsed_chat_id,
-        "text": _truncate_for_telegram(message),
+        "text": _truncate_for_telegram(text),
         "parse_mode": parse_mode,
     }
 
